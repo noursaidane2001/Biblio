@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <header th:fragment="header" class="bg-white shadow-sm sticky-top">
+        <nav class="navbar navbar-expand-lg navbar-light">
+            <div class="container">
+                <a th:href="@{/}" class="navbar-brand fw-bold text-primary fs-4">
+                    <i class="bi bi-book"></i> Biblio
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto align-items-center">
+                        <li class="nav-item" sec:authorize="isAuthenticated()">
+                            <span class="navbar-text me-3 text-muted" th:text="'👋 Bonjour, ' + ${username}"></span>
+                        </li>
+                        <li class="nav-item" sec:authorize="isAuthenticated()">
+                            <a th:href="@{/}" class="btn btn-outline-primary btn-sm me-2">
+                                <i class="bi bi-house"></i> Accueil
+                            </a>
+                        </li>
+                        <li class="nav-item" sec:authorize="isAuthenticated()">
+                            <a th:href="@{/logout}" class="btn btn-danger btn-sm">
+                                <i class="bi bi-box-arrow-right"></i> Déconnexion
+                            </a>
+                        </li>
+                        <li class="nav-item" sec:authorize="isAnonymous()">
+                            <a th:href="@{/login}" class="btn btn-primary btn-sm me-2">
+                                <i class="bi bi-box-arrow-in-right"></i> Connexion
+                            </a>
+                        </li>
+                        <li class="nav-item" sec:authorize="isAnonymous()">
+                            <a th:href="@{/signup}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-person-plus"></i> Inscription
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+</body>
+</html>

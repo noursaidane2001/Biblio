@@ -1,5 +1,11 @@
 package com.biblio.dao;
 
-public interface UserDAO {
+import com.biblio.entities.User;
+import java.util.Optional;
 
+public interface UserDAO {
+    Optional<User> findByEmail(String email);
+    boolean existsByEmail(String email);
+    User save(User user);
+    Optional<User> findById(Long id);
 }
