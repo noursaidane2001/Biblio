@@ -8,4 +8,5 @@ public interface UserDAO {
     boolean existsByEmail(String email);
     User save(User user);
     Optional<User> findById(Long id);
+    Optional<User> findByTokenVerification(String token);
 }

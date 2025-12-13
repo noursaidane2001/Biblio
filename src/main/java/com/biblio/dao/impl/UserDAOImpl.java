@@ -55,4 +55,17 @@ public class UserDAOImpl implements UserDAO {
         User user = entityManager.find(User.class, id);
         return Optional.ofNullable(user);
     }
+    
+    @Override
+    public Optional<User> findByTokenVerification(String token) {
+        TypedQuery<User> query = entityManager.createQuery(
+            "SELECT u FROM User u WHERE u.tokenVerification = :token", User.class);
+        query.setParameter("token", token);
+        try {
+            User user = query.getSingleResult();
+            return Optional.of(user);
+        } catch (jakarta.persistence.NoResultException e) {
+            return Optional.empty();
+        }
+    }
 }

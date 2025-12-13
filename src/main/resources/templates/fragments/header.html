@@ -2,6 +2,56 @@
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
+    <script>
+        // Script global pour ajouter le JWT dans le header Authorization pour toutes les requêtes API
+        (function() {
+            // Intercepter fetch
+            const originalFetch = window.fetch;
+            window.fetch = function(...args) {
+                const token = localStorage.getItem('jwt');
+                if (token && args[0] && typeof args[0] === 'string' && args[0].startsWith('/api/')) {
+                    const options = args[1] || {};
+                    options.headers = options.headers || {};
+                    if (!options.headers['Authorization']) {
+                        options.headers['Authorization'] = `Bearer ${token}`;
+                    }
+                    args[1] = options;
+                }
+                return originalFetch.apply(this, args);
+            };
+            
+            // Intercepter XMLHttpRequest
+            const originalOpen = XMLHttpRequest.prototype.open;
+            const originalSend = XMLHttpRequest.prototype.send;
+            XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+                this._url = url;
+                return originalOpen.apply(this, [method, url, ...rest]);
+            };
+            XMLHttpRequest.prototype.send = function(...args) {
+                const token = localStorage.getItem('jwt');
+                if (token && this._url && this._url.startsWith('/api/')) {
+                    this.setRequestHeader('Authorization', `Bearer ${token}`);
+                }
+                return originalSend.apply(this, args);
+            };
+        })();
+        
+        // Nettoyer le localStorage (tokens JWT) lors du logout
+        document.addEventListener('DOMContentLoaded', function() {
+            const logoutForm = document.getElementById('logoutForm');
+            if (logoutForm) {
+                logoutForm.addEventListener('submit', function(e) {
+                    // Nettoyer le localStorage pour supprimer les tokens JWT
+                    localStorage.removeItem('jwt');
+                    localStorage.removeItem('refreshToken');
+                    // Nettoyer aussi les cookies
+                    document.cookie = 'jwt_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                    document.cookie = 'refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                    // Laisser Spring Security gérer la redirection normale
+                });
+            }
+        });
+    </script>
 </head>
 <body>
     <header th:fragment="header" class="bg-white shadow-sm sticky-top">
@@ -17,17 +67,42 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto align-items-center">
                         <li class="nav-item" sec:authorize="isAuthenticated()">
-                            <span class="navbar-text me-3 text-muted" th:text="'👋 Bonjour, ' + ${username}"></span>
-                        </li>
-                        <li class="nav-item" sec:authorize="isAuthenticated()">
-                            <a th:href="@{/}" class="btn btn-outline-primary btn-sm me-2">
-                                <i class="bi bi-house"></i> Accueil
-                            </a>
-                        </li>
-                        <li class="nav-item" sec:authorize="isAuthenticated()">
-                            <a th:href="@{/logout}" class="btn btn-danger btn-sm">
-                                <i class="bi bi-box-arrow-right"></i> Déconnexion
-                            </a>
+                            <div class="dropdown">
+                                <a class="btn btn-outline-primary btn-sm dropdown-toggle d-flex align-items-center" 
+                                   href="#" role="button" id="userDropdown" data-bs-toggle="dropdown" 
+                                   aria-expanded="false">
+                                    <i class="bi bi-person-circle me-2" style="font-size: 1.2rem;"></i>
+                                    <span th:text="${userFullName ?: userEmail}">Utilisateur</span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                    <li>
+                                        <h6 class="dropdown-header">
+                                            <i class="bi bi-person me-2"></i>
+                                            <span th:text="${userFullName}">Nom complet</span>
+                                        </h6>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" th:href="@{/user/profile}">
+                                            <i class="bi bi-person-gear me-2"></i>Mon profil
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" th:href="@{/}">
+                                            <i class="bi bi-house me-2"></i>Accueil
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form th:action="@{/logout}" method="post" style="display: inline; margin: 0;" id="logoutForm">
+                                            <!-- CSRF désactivé en mode stateless avec JWT -->
+                                            <button type="submit" class="dropdown-item text-danger border-0 bg-transparent w-100 text-start p-2" style="cursor: pointer;">
+                                                <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
                         </li>
                         <li class="nav-item" sec:authorize="isAnonymous()">
                             <a th:href="@{/login}" class="btn btn-primary btn-sm me-2">
@@ -35,7 +110,7 @@
                             </a>
                         </li>
                         <li class="nav-item" sec:authorize="isAnonymous()">
-                            <a th:href="@{/signup}" class="btn btn-outline-primary btn-sm">
+                            <a th:href="@{/register}" class="btn btn-outline-primary btn-sm">
                                 <i class="bi bi-person-plus"></i> Inscription
                             </a>
                         </li>

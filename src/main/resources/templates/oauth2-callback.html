@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentification OAuth2 - Biblio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="text-center text-white">
+        <div class="spinner-border mb-3" role="status">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+        <h4>Authentification en cours...</h4>
+        <p class="mt-2">Veuillez patienter pendant que nous finalisons votre connexion.</p>
+    </div>
+
+    <script>
+        // Récupérer les tokens depuis l'URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const refresh = urlParams.get('refresh');
+
+        if (token && refresh) {
+            // Stocker les tokens dans localStorage (pour les appels API JavaScript)
+            localStorage.setItem('jwt', token);
+            localStorage.setItem('refreshToken', refresh);
+            
+            // Stocker aussi dans un cookie pour que le serveur puisse le lire
+            // Le cookie sera utilisé par JwtAuthFilter pour authentifier les requêtes Thymeleaf
+            document.cookie = `jwt_token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+            document.cookie = `refresh_token=${refresh}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+            
+            // Rediriger vers le dashboard (le cookie sera envoyé automatiquement)
+            window.location.href = '/dashboard';
+        } else {
+            // Erreur : pas de tokens dans l'URL
+            alert('Erreur lors de l\'authentification OAuth2. Veuillez réessayer.');
+            window.location.href = '/login';
+        }
+    </script>
+</body>
+</html>

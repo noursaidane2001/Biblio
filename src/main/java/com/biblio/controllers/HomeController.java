@@ -20,7 +20,8 @@ public class HomeController {
     public String index(@AuthenticationPrincipal UserDetails user, Model model) {
         if (user != null) {
             model.addAttribute("username", user.getUsername());
-            model.addAttribute("token", jwtService.generateToken(user));
+            // Utiliser generateAccessToken() au lieu de generateToken()
+            model.addAttribute("token", jwtService.generateAccessToken(user));
         }
         return "index";
     }

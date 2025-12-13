@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Profil - Biblio</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" 
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/custom.css}" rel="stylesheet">
+</head>
+<body class="bg-gradient-primary">
+    <div th:replace="~{fragments/header :: header}"></div>
+
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10 col-lg-8">
+                <!-- En-tête de la page -->
+                <div class="card shadow-lg border-0 mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-4" 
+                                 style="width: 80px; height: 80px;">
+                                <i class="bi bi-person-circle text-primary" style="font-size: 3rem;"></i>
+                            </div>
+                            <div>
+                                <h1 class="h3 fw-bold text-primary mb-1" th:text="${user.nomComplet}">Nom Complet</h1>
+                                <p class="text-muted mb-0" th:text="${user.username}">email@example.com</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informations personnelles -->
+                <div class="card shadow-lg border-0 mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-info-circle me-2"></i>Informations personnelles
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted">Prénom</label>
+                                <div class="form-control-plaintext" th:text="${user.prenom}">Prénom</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted">Nom</label>
+                                <div class="form-control-plaintext" th:text="${user.nom}">Nom</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted">Email</label>
+                                <div class="form-control-plaintext" th:text="${user.username}">email@example.com</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted">Téléphone</label>
+                                <div class="form-control-plaintext" th:text="${user.telephone ?: 'Non renseigné'}">Téléphone</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold text-muted">Adresse</label>
+                                <div class="form-control-plaintext" th:text="${user.adresse ?: 'Non renseignée'}">Adresse</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informations du compte -->
+                <div class="card shadow-lg border-0 mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-shield-check me-2"></i>Informations du compte
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted">Rôle</label>
+                                <div>
+                                    <span class="badge bg-primary" th:text="${user.role.displayName}">Rôle</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted">Date d'inscription</label>
+                                <div class="form-control-plaintext" 
+                                     th:text="${#temporals.format(user.dateInscription, 'dd/MM/yyyy à HH:mm')}">
+                                    Date
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted">Statut du compte</label>
+                                <div>
+                                    <span class="badge" 
+                                          th:classappend="${user.actif} ? 'bg-success' : 'bg-danger'"
+                                          th:text="${user.actif} ? 'Actif' : 'Inactif'">
+                                        Statut
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-muted">Email vérifié</label>
+                                <div>
+                                    <span class="badge" 
+                                          th:classappend="${user.emailVerifie} ? 'bg-success' : 'bg-warning'"
+                                          th:text="${user.emailVerifie} ? 'Vérifié' : 'Non vérifié'">
+                                        Email
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-6" th:if="${user.bibliotheque != null}">
+                                <label class="form-label fw-semibold text-muted">Bibliothèque</label>
+                                <div class="form-control-plaintext" th:text="${user.bibliotheque.nom}">Bibliothèque</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="card shadow-lg border-0">
+                    <div class="card-body">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a th:href="@{/}" class="btn btn-outline-primary">
+                                <i class="bi bi-arrow-left me-2"></i>Retour à l'accueil
+                            </a>
+                            <button class="btn btn-primary" disabled>
+                                <i class="bi bi-pencil me-2"></i>Modifier le profil
+                                <small class="d-block" style="font-size: 0.7rem;">(Bientôt disponible)</small>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+</body>
+</html>
+

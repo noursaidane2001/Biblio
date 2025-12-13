@@ -1,18 +1,22 @@
 package com.biblio.controllers;
 
+import com.biblio.dto.AuthResponse;
+import com.biblio.dto.LoginRequest;
+import com.biblio.dto.RefreshTokenRequest;
+import com.biblio.dto.RegisterRequest;
 import com.biblio.services.AuthService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
-@Controller
+@RestController
+@RequestMapping("/api/auth")
 public class AuthController {
     private final AuthService authService;
 
@@ -20,38 +24,139 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @GetMapping("/login")
-    public String loginPage() {
-        return "login";
-    }
-
-    @PostMapping("/auth/login")
-    public ResponseEntity<Map<String, String>> authenticate(@RequestBody Map<String, String> request) {
+    /**
+     * POST /api/auth/login
+     * Authentifie un utilisateur avec email/password et retourne access + refresh tokens
+     */
+    @PostMapping("/login")
+    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
         try {
-            String email = request.get("email");
-            String password = request.get("password");
-
-            if (email == null || password == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("error", "Email et mot de passe requis"));
-            }
-
-            Map<String, String> response = authService.authenticate(email, password);
-            return ResponseEntity.ok(response);
+            AuthResponse response = authService.authenticate(request.email(), request.password());
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("accessToken", response.accessToken());
+            result.put("refreshToken", response.refreshToken());
+            result.put("tokenType", response.tokenType());
+            result.put("expiresIn", response.expiresIn());
+            result.put("user", response.user());
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Identifiants invalides"));
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Authentication failed");
+            error.put("message", e.getMessage() != null ? e.getMessage() : "Identifiants invalides");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
         }
     }
 
-    @GetMapping("/auth/token")
-    public ResponseEntity<Map<String, String>> getToken(Authentication authentication) {
+    /**
+     * POST /api/auth/register
+     * Crée un nouveau compte et retourne access + refresh tokens
+     */
+    @PostMapping("/register")
+    public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody RegisterRequest request) {
+        try {
+            AuthResponse response = authService.register(
+                    request.nom(),
+                    request.prenom(),
+                    request.email(),
+                    request.password()
+            );
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("accessToken", response.accessToken());
+            result.put("refreshToken", response.refreshToken());
+            result.put("tokenType", response.tokenType());
+            result.put("expiresIn", response.expiresIn());
+            result.put("user", response.user());
+            result.put("message", "Compte créé avec succès ! Veuillez vérifier votre email pour activer votre compte.");
+            return ResponseEntity.status(HttpStatus.CREATED).body(result);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Registration failed");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            // Logger l'erreur pour le debugging
+            e.printStackTrace();
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Registration failed");
+            error.put("message", e.getMessage() != null ? e.getMessage() : "Erreur lors de l'inscription");
+            error.put("details", e.getClass().getSimpleName());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * POST /api/auth/refresh
+     * Rafraîchit les tokens en utilisant un refresh token
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<Map<String, Object>> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        try {
+            AuthResponse response = authService.refreshToken(request.refreshToken());
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("accessToken", response.accessToken());
+            result.put("refreshToken", response.refreshToken());
+            result.put("tokenType", response.tokenType());
+            result.put("expiresIn", response.expiresIn());
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Token refresh failed");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Token refresh failed");
+            error.put("message", "Erreur lors du renouvellement du token");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * GET /api/auth/me
+     * Retourne les informations de l'utilisateur authentifié (protégé par JWT)
+     */
+    @GetMapping("/me")
+    public ResponseEntity<Map<String, Object>> getCurrentUser(Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof UserDetails userDetails)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Non authentifié"));
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Unauthorized");
+            error.put("message", "Non authentifié");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
         }
 
-        Map<String, String> response = authService.generateTokenForAuthenticatedUser(userDetails);
-        return ResponseEntity.ok(response);
+        try {
+            Map<String, Object> userInfo = authService.getUserInfo(userDetails);
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("user", userInfo);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Internal server error");
+            error.put("message", "Erreur lors de la récupération des informations");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * POST /api/auth/logout
+     * Logout (stateless - le client doit simplement supprimer les tokens)
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, Object>> logout() {
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("message", "Déconnexion réussie. Veuillez supprimer les tokens côté client.");
+        return ResponseEntity.ok(result);
     }
 }

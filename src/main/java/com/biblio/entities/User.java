@@ -60,8 +60,7 @@ public class User  implements UserDetails {
 	    @Column(nullable = false, unique = true, length = 100)
 	    private String email;
 
-	    @NotBlank(message = "Le mot de passe est obligatoire")
-	    @Column(nullable = false)
+	    @Column(nullable = true)
 	    private String motDePasse;
 
 	    @Pattern(regexp = "^\\+?[0-9\\s\\-()]{8,20}$", message = "Format de téléphone invalide")
@@ -114,7 +113,9 @@ public class User  implements UserDetails {
 
 	@Override
 	public String getPassword() {
-	    return motDePasse;
+	    // Pour les utilisateurs OAuth2 sans mot de passe, retourner une chaîne vide
+	    // Ils ne pourront pas utiliser l'authentification classique
+	    return motDePasse != null ? motDePasse : "";
 	}
 
 	@Override
@@ -145,6 +146,12 @@ public class User  implements UserDetails {
 	    public String getNomComplet() {
 	    return prenom + " " + nom;
 	}
+
+	    // Getter explicite pour email (même si @Getter devrait le générer)
+	    // Cela garantit que getEmail() existe même si Lombok ne fonctionne pas correctement
+	    public String getEmail() {
+	        return email;
+	    }
 
 	    public boolean isUsager() {
 	    return role == Role.USAGER;

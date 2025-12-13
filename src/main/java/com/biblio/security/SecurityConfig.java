@@ -13,69 +13,105 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-@Configuration
+/**
+ * Configuration Spring Security 100% STATELESS avec JWT
+ * 
+ * - Pas de sessions HTTP (SessionCreationPolicy.STATELESS)
+ * - CSRF désactivé (JWT est immune à CSRF)
+ * - OAuth2 génère des JWT
+ * - Toutes les authentifications passent par JWT
+ */
+@Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+    
     private final JwtAuthFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
+    private final OAuth2UserService<OAuth2UserRequest, OAuth2User> oAuth2UserService;
+    private final OAuth2JwtSuccessHandler oAuth2JwtSuccessHandler;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter, UserDetailsService userDetailsService) {
+    public SecurityConfig(
+            JwtAuthFilter jwtAuthFilter,
+            UserDetailsService userDetailsService,
+            CustomOAuth2UserService oAuth2UserService,
+            OAuth2JwtSuccessHandler oAuth2JwtSuccessHandler,
+            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
+        this.oAuth2UserService = oAuth2UserService;
+        this.oAuth2JwtSuccessHandler = oAuth2JwtSuccessHandler;
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/api/**", "/auth/**", "/h2-console/**"))
+                // CSRF désactivé (JWT est immune à CSRF)
+                .csrf(csrf -> csrf.disable())
+                
+                // Headers
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.sameOrigin()))
+                
+                // Session Management - STATELESS obligatoire
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                
+                // Exception Handling - Retourner JSON au lieu de rediriger
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint))
+                
+                // Autorizations
                 .authorizeHttpRequests(auth -> auth
+                        // Endpoints publics
                         .requestMatchers(
-                                "/",
-                                "/login",
-                                "/signup",
-                                "/h2-console/**",
-                                "/auth/login",
-                                "/auth/signup",
-                                "/auth/login-form",
-                                "/auth/signup-form",
+                                "/api/auth/**",           // Login, register, refresh
+                                "/oauth2/**",             // OAuth2 authorization
+                                "/login/oauth2/**",       // OAuth2 callback
                                 "/css/**",
                                 "/js/**",
                                 "/images/**",
-                                "/webjars/**"
+                                "/webjars/**",
+                                "/h2-console/**"
                         ).permitAll()
+                        // Endpoints protégés par rôles
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/bibliothecaire/**").hasRole("BIBLIOTHECAIRE")
+                        // Tous les autres endpoints API nécessitent une authentification
+                        .requestMatchers("/api/**").authenticated()
+                        // Endpoints web (pour compatibilité avec les templates Thymeleaf)
+                        .requestMatchers("/", "/login", "/register", "/register/verify", "/oauth2-callback").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/bibliothecaire/**").hasRole("BIBLIOTHECAIRE")
                         .anyRequest().authenticated())
-                .formLogin(form -> form
+                
+                // OAuth2 Login - Génère des JWT
+                .oauth2Login(oauth2 -> oauth2
                         .loginPage("/login")
-                        .loginProcessingUrl("/auth/login-form")
-                        .defaultSuccessUrl("/", true)
-                        .permitAll())
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/")
-                        .permitAll())
-                .authenticationProvider(authenticationProvider())
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(oAuth2UserService))
+                        .successHandler(oAuth2JwtSuccessHandler))
+                
+                // Authentication Provider - Spring détectera automatiquement les beans UserDetailsService et PasswordEncoder
+                // Pas besoin de créer explicitement DaoAuthenticationProvider, Spring le fera automatiquement
+                
+                // JWT Filter - Doit être avant UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
-    }
+    // Spring Security 7.0 configure automatiquement DaoAuthenticationProvider
+    // à partir des beans UserDetailsService et PasswordEncoder disponibles
+    // Pas besoin de créer explicitement le bean AuthenticationProvider
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
