@@ -31,28 +31,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
-    
-    private final JwtAuthFilter jwtAuthFilter;
-    private final UserDetailsService userDetailsService;
-    private final OAuth2UserService<OAuth2UserRequest, OAuth2User> oAuth2UserService;
-    private final OAuth2JwtSuccessHandler oAuth2JwtSuccessHandler;
-    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
-
-    public SecurityConfig(
-            JwtAuthFilter jwtAuthFilter,
-            UserDetailsService userDetailsService,
-            CustomOAuth2UserService oAuth2UserService,
-            OAuth2JwtSuccessHandler oAuth2JwtSuccessHandler,
-            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
-        this.jwtAuthFilter = jwtAuthFilter;
-        this.userDetailsService = userDetailsService;
-        this.oAuth2UserService = oAuth2UserService;
-        this.oAuth2JwtSuccessHandler = oAuth2JwtSuccessHandler;
-        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
-    }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtAuthFilter jwtAuthFilter,
+            CustomOAuth2UserService oAuth2UserService,
+            OAuth2JwtSuccessHandler oAuth2JwtSuccessHandler,
+            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) throws Exception {
         http
                 // CSRF désactivé (JWT est immune à CSRF)
                 .csrf(csrf -> csrf.disable())
@@ -97,7 +83,7 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/login")
                         .userInfoEndpoint(userInfo -> userInfo
-                                .userService(oAuth2UserService))
+                        .userService(oAuth2UserService))
                         .successHandler(oAuth2JwtSuccessHandler))
                 
                 // Authentication Provider - Spring détectera automatiquement les beans UserDetailsService et PasswordEncoder
