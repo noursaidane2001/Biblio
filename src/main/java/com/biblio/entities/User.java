@@ -144,9 +144,15 @@ public class User  implements UserDetails {
 	    return actif != null && actif && emailVerifie != null && emailVerifie;
 	}
 
-	    public String getNomComplet() {
-	    return prenom + " " + nom;
-	}
+    public String getNomComplet() {
+        String p = prenom != null ? prenom.trim() : "";
+        String n = nom != null ? nom.trim() : "";
+        if (!p.isEmpty() && p.equalsIgnoreCase(n)) {
+            return p;
+        }
+        String full = (p + " " + n).trim();
+        return full.isEmpty() ? p : full;
+    }
 
 	    // Getter explicite pour email (même si @Getter devrait le générer)
 	    // Cela garantit que getEmail() existe même si Lombok ne fonctionne pas correctement
