@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord - Bibliothécaire - Biblio</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" 
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/custom.css}" rel="stylesheet">
+</head>
+<body class="bg-gradient-primary">
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div th:replace="~{fragments/toasts :: toast-container}"></div>
+
+    <div class="container py-5">
+        <!-- Message de bienvenue -->
+        <div class="card shadow-lg border-0 mb-4 animate-fade-in">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center">
+                    <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-4" 
+                         style="width: 80px; height: 80px; animation: pulse 2s infinite;">
+                        <i class="bi bi-book-half text-info" style="font-size: 3rem;"></i>
+                    </div>
+                    <div>
+                        <h1 class="h3 fw-bold text-info mb-1">
+                            <i class="bi bi-bookmark-check me-2"></i>Espace Bibliothécaire
+                        </h1>
+                        <p class="text-muted mb-0">
+                            Bonjour <strong th:text="${user.nomComplet}">Bibliothécaire</strong>, 
+                            gérez les ressources et les emprunts de votre bibliothèque.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cartes d'actions rapides pour bibliothécaire -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm border-0 hover-shadow">
+                    <div class="card-body text-center">
+                        <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 60px; height: 60px;">
+                            <i class="bi bi-book text-info" style="font-size: 2rem;"></i>
+                        </div>
+                        <h5 class="card-title">Gérer les Ressources</h5>
+                        <p class="card-text text-muted">Ajoutez, modifiez et gérez les livres et ressources</p>
+                        <button class="btn btn-info" disabled>
+                            <i class="bi bi-arrow-right me-2"></i>Bientôt disponible
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm border-0 hover-shadow">
+                    <div class="card-body text-center">
+                        <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 60px; height: 60px;">
+                            <i class="bi bi-people text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                        <h5 class="card-title">Gérer les Emprunts</h5>
+                        <p class="card-text text-muted">Validez et suivez les emprunts des usagers</p>
+                        <button class="btn btn-primary" disabled>
+                            <i class="bi bi-arrow-right me-2"></i>Bientôt disponible
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm border-0 hover-shadow">
+                    <div class="card-body text-center">
+                        <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 60px; height: 60px;">
+                            <i class="bi bi-bell text-warning" style="font-size: 2rem;"></i>
+                        </div>
+                        <h5 class="card-title">Notifications</h5>
+                        <p class="card-text text-muted">Consultez les notifications et alertes</p>
+                        <button class="btn btn-warning" disabled>
+                            <i class="bi bi-arrow-right me-2"></i>Bientôt disponible
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm border-0 hover-shadow">
+                    <div class="card-body text-center">
+                        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 60px; height: 60px;">
+                            <i class="bi bi-person-circle text-success" style="font-size: 2rem;"></i>
+                        </div>
+                        <h5 class="card-title">Mon Profil</h5>
+                        <p class="card-text text-muted">Consultez et modifiez vos informations</p>
+                        <a th:href="@{/user/profile}" class="btn btn-success">
+                            <i class="bi bi-arrow-right me-2"></i>Voir mon profil
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm border-0 hover-shadow">
+                    <div class="card-body text-center">
+                        <div class="bg-secondary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 60px; height: 60px;">
+                            <i class="bi bi-file-earmark-text text-secondary" style="font-size: 2rem;"></i>
+                        </div>
+                        <h5 class="card-title">Rapports</h5>
+                        <p class="card-text text-muted">Générez et consultez les rapports</p>
+                        <button class="btn btn-secondary" disabled>
+                            <i class="bi bi-arrow-right me-2"></i>Bientôt disponible
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations du compte -->
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-info-circle me-2"></i>Informations du compte
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-semibold text-muted">Nom complet:</td>
+                                <td th:text="${user.nomComplet}">Nom Complet</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold text-muted">Email:</td>
+                                <td th:text="${user.email}">email@example.com</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold text-muted">Rôle:</td>
+                                <td>
+                                    <span class="badge bg-info" th:text="${user.role.displayName}">Bibliothécaire</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold text-muted">Statut:</td>
+                                <td>
+                                    <span class="badge" 
+                                          th:classappend="${user.actif} ? 'bg-success' : 'bg-danger'"
+                                          th:text="${user.actif} ? 'Actif' : 'Inactif'">
+                                        Statut
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr th:if="${user.bibliotheque != null}">
+                                <td class="fw-semibold text-muted">Bibliothèque:</td>
+                                <td th:text="${user.bibliotheque.nom}">Bibliothèque</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-shield-check me-2"></i>Actions rapides
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a th:href="@{/user/profile}" class="btn btn-outline-info">
+                                <i class="bi bi-person-gear me-2"></i>Gérer mon profil
+                            </a>
+                            <a th:href="@{/}" class="btn btn-outline-secondary">
+                                <i class="bi bi-house me-2"></i>Retour à l'accueil
+                            </a>
+                            <form th:action="@{/logout}" method="post" style="display: inline;">
+                                <button type="submit" class="btn btn-outline-danger w-100">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Se déconnecter
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    
+    <style>
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .hover-shadow {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .hover-shadow:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        }
+    </style>
+    
+    <script th:inline="javascript">
+        // Initialiser les toasts Bootstrap
+        document.addEventListener('DOMContentLoaded', function() {
+            const toastElements = document.querySelectorAll('.toast');
+            if (toastElements.length > 0) {
+                toastElements.forEach(function(toastEl) {
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+                        const toast = new bootstrap.Toast(toastEl, {
+                            autohide: true,
+                            delay: 5000
+                        });
+                        toast.show();
+                    } else {
+                        toastEl.classList.add('show');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

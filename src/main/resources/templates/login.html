@@ -129,11 +129,32 @@
                     
                     // Stocker aussi dans un cookie pour que le serveur puisse le lire
                     // Le cookie sera utilisé par JwtAuthFilter pour authentifier les requêtes Thymeleaf
-                    document.cookie = `jwt_token=${data.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
-                    document.cookie = `refresh_token=${data.refreshToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+                    // Les tokens JWT peuvent contenir des caractères spéciaux, donc on les encode
+                    const encodedToken = encodeURIComponent(data.accessToken);
+                    const encodedRefresh = encodeURIComponent(data.refreshToken);
                     
-                    // Rediriger vers le dashboard (le cookie sera envoyé automatiquement)
-                    window.location.href = '/dashboard';
+                    // Définir les cookies avec les bons attributs
+                    // Note: Les cookies ont une limite de taille (environ 4KB), mais les JWT sont généralement plus petits
+                    document.cookie = `jwt_token=${encodedToken}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax; Secure=false`;
+                    document.cookie = `refresh_token=${encodedRefresh}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax; Secure=false`;
+                    
+                    // Rediriger vers le dashboard approprié selon le rôle
+                    let dashboardUrl = '/dashboard';
+                    if (data.user && data.user.role) {
+                        switch(data.user.role) {
+                            case 'ADMIN':
+                                dashboardUrl = '/admin/dashboard';
+                                break;
+                            case 'BIBLIOTHECAIRE':
+                                dashboardUrl = '/bibliothecaire/dashboard';
+                                break;
+                            case 'USAGER':
+                                dashboardUrl = '/usager/dashboard';
+                                break;
+                        }
+                    }
+                    // Utiliser window.location.replace pour éviter que l'utilisateur puisse revenir en arrière
+                    window.location.replace(dashboardUrl);
                 } else {
                     // Afficher l'erreur
                     alert(data.message || 'Erreur de connexion');

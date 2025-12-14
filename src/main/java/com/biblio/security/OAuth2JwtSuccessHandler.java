@@ -64,11 +64,13 @@ public class OAuth2JwtSuccessHandler extends SimpleUrlAuthenticationSuccessHandl
             // Retourner JSON pour les apps mobiles
             sendJsonResponse(response, accessToken, refreshToken, user);
         } else {
-            // Rediriger vers la page de callback OAuth2 avec tokens dans l'URL
-            // La page de callback stockera les tokens dans localStorage et redirigera vers /dashboard
-            String redirectUrl = String.format("/oauth2-callback?token=%s&refresh=%s",
+            // Rediriger vers la page de callback OAuth2 avec tokens et rôle dans l'URL
+            // La page de callback stockera les tokens dans localStorage et redirigera vers le bon dashboard
+            String role = user.getRole().name();
+            String redirectUrl = String.format("/oauth2-callback?token=%s&refresh=%s&role=%s",
                     java.net.URLEncoder.encode(accessToken, java.nio.charset.StandardCharsets.UTF_8),
-                    java.net.URLEncoder.encode(refreshToken, java.nio.charset.StandardCharsets.UTF_8));
+                    java.net.URLEncoder.encode(refreshToken, java.nio.charset.StandardCharsets.UTF_8),
+                    java.net.URLEncoder.encode(role, java.nio.charset.StandardCharsets.UTF_8));
             getRedirectStrategy().sendRedirect(request, response, redirectUrl);
         }
     }

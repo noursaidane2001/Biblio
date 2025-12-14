@@ -63,6 +63,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 for (jakarta.servlet.http.Cookie cookie : cookies) {
                     if ("jwt_token".equals(cookie.getName())) {
                         token = cookie.getValue();
+                        // Décoder le token si nécessaire (il peut être encodé dans le cookie)
+                        if (token != null && token.contains("%")) {
+                            try {
+                                token = java.net.URLDecoder.decode(token, java.nio.charset.StandardCharsets.UTF_8);
+                            } catch (Exception e) {
+                                logger.debug("Failed to decode JWT token from cookie", e);
+                            }
+                        }
                         break;
                     }
                 }
@@ -82,10 +90,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         try {
             String username = jwtService.extractUsername(token);
-
+            
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-
+                
                 if (jwtService.isTokenValid(token, userDetails)) {
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             userDetails,
@@ -95,20 +103,38 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 } else {
-                    handleError(response, "Token invalide ou expiré", HttpServletResponse.SC_UNAUTHORIZED);
-                    return;
+                    // Token invalide - ne pas retourner d'erreur JSON pour les requêtes web
+                    // Laisser Spring Security gérer la redirection
+                    if (isApiRequest(request)) {
+                        handleError(response, "Token invalide ou expiré", HttpServletResponse.SC_UNAUTHORIZED);
+                        return;
+                    }
+                    // Pour les requêtes web, supprimer le cookie invalide et laisser passer
+                    // Spring Security redirigera vers /login
+                    clearInvalidTokenCookie(response);
                 }
             }
         } catch (io.jsonwebtoken.ExpiredJwtException e) {
-            handleError(response, "Token expiré", HttpServletResponse.SC_UNAUTHORIZED);
-            return;
+            // Token expiré
+            if (isApiRequest(request)) {
+                handleError(response, "Token expiré", HttpServletResponse.SC_UNAUTHORIZED);
+                return;
+            }
+            clearInvalidTokenCookie(response);
         } catch (io.jsonwebtoken.security.SignatureException | io.jsonwebtoken.MalformedJwtException e) {
-            handleError(response, "Token invalide ou malformé", HttpServletResponse.SC_UNAUTHORIZED);
-            return;
+            // Token invalide ou malformé
+            if (isApiRequest(request)) {
+                handleError(response, "Token invalide ou malformé", HttpServletResponse.SC_UNAUTHORIZED);
+                return;
+            }
+            clearInvalidTokenCookie(response);
         } catch (Exception e) {
             logger.debug("JWT token validation failed", e);
-            handleError(response, "Erreur lors de la validation du token", HttpServletResponse.SC_UNAUTHORIZED);
-            return;
+            if (isApiRequest(request)) {
+                handleError(response, "Erreur lors de la validation du token", HttpServletResponse.SC_UNAUTHORIZED);
+                return;
+            }
+            clearInvalidTokenCookie(response);
         }
 
         filterChain.doFilter(request, response);
@@ -128,6 +154,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                path.startsWith("/webjars/") ||
                path.equals("/") ||
                path.equals("/h2-console");
+    }
+    
+    private boolean isApiRequest(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/api/");
+    }
+    
+    private void clearInvalidTokenCookie(HttpServletResponse response) {
+        // Supprimer le cookie invalide
+        jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie("jwt_token", "");
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+        
+        jakarta.servlet.http.Cookie refreshCookie = new jakarta.servlet.http.Cookie("refresh_token", "");
+        refreshCookie.setPath("/");
+        refreshCookie.setMaxAge(0);
+        response.addCookie(refreshCookie);
     }
 
     private void handleError(HttpServletResponse response, String message, int status) throws IOException {

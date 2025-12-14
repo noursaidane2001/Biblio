@@ -77,6 +77,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/login", "/register", "/register/verify", "/oauth2-callback").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/bibliothecaire/**").hasRole("BIBLIOTHECAIRE")
+                        .requestMatchers("/usager/**").authenticated() // Accessible à tous les utilisateurs authentifiés
                         .anyRequest().authenticated())
                 
                 // OAuth2 Login - Génère des JWT

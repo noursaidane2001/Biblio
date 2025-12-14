@@ -8,6 +8,7 @@ import jakarta.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -67,5 +68,35 @@ public class UserDAOImpl implements UserDAO {
         } catch (jakarta.persistence.NoResultException e) {
             return Optional.empty();
         }
+    }
+
+    @Override
+    public List<User> findAll() {
+        TypedQuery<User> query = entityManager.createQuery(
+            "SELECT u FROM User u ORDER BY u.dateInscription DESC", User.class);
+        return query.getResultList();
+    }
+
+    @Override
+    @Transactional
+    public void delete(User user) {
+        entityManager.remove(entityManager.contains(user) ? user : entityManager.merge(user));
+    }
+
+    @Override
+    public long count() {
+        Long count = entityManager.createQuery(
+            "SELECT COUNT(u) FROM User u", Long.class)
+            .getSingleResult();
+        return count != null ? count : 0;
+    }
+
+    @Override
+    public long countByRole(com.biblio.enums.Role role) {
+        Long count = entityManager.createQuery(
+            "SELECT COUNT(u) FROM User u WHERE u.role = :role", Long.class)
+            .setParameter("role", role)
+            .getSingleResult();
+        return count != null ? count : 0;
     }
 }

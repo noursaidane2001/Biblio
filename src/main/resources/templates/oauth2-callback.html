@@ -30,10 +30,11 @@
     </div>
 
     <script>
-        // Récupérer les tokens depuis l'URL
+        // Récupérer les tokens et le rôle depuis l'URL
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
         const refresh = urlParams.get('refresh');
+        const role = urlParams.get('role');
 
         if (token && refresh) {
             // Stocker les tokens dans localStorage (pour les appels API JavaScript)
@@ -42,11 +43,27 @@
             
             // Stocker aussi dans un cookie pour que le serveur puisse le lire
             // Le cookie sera utilisé par JwtAuthFilter pour authentifier les requêtes Thymeleaf
-            document.cookie = `jwt_token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
-            document.cookie = `refresh_token=${refresh}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+            // Les tokens sont déjà encodés dans l'URL, donc on peut les utiliser directement
+            document.cookie = `jwt_token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax; Secure=false`;
+            document.cookie = `refresh_token=${refresh}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax; Secure=false`;
             
-            // Rediriger vers le dashboard (le cookie sera envoyé automatiquement)
-            window.location.href = '/dashboard';
+            // Rediriger vers le dashboard approprié selon le rôle
+            let dashboardUrl = '/dashboard';
+            if (role) {
+                switch(role) {
+                    case 'ADMIN':
+                        dashboardUrl = '/admin/dashboard';
+                        break;
+                    case 'BIBLIOTHECAIRE':
+                        dashboardUrl = '/bibliothecaire/dashboard';
+                        break;
+                    case 'USAGER':
+                        dashboardUrl = '/usager/dashboard';
+                        break;
+                }
+            }
+            // Utiliser window.location.replace pour éviter que l'utilisateur puisse revenir en arrière
+            window.location.replace(dashboardUrl);
         } else {
             // Erreur : pas de tokens dans l'URL
             alert('Erreur lors de l\'authentification OAuth2. Veuillez réessayer.');
