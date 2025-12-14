@@ -40,8 +40,8 @@ public class SecurityConfig {
             OAuth2JwtSuccessHandler oAuth2JwtSuccessHandler,
             JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) throws Exception {
         http
-                // CSRF désactivé (JWT est immune à CSRF)
-                .csrf(csrf -> csrf.disable())
+                // CSRF actif pour les formulaires Thymeleaf, ignoré pour l'API stateless
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
                 
                 // Headers
                 .headers(headers -> headers

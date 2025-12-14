@@ -95,7 +95,7 @@
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <form th:action="@{/logout}" method="post" style="display: inline; margin: 0;" id="logoutForm">
-                                            <!-- CSRF désactivé en mode stateless avec JWT -->
+                                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                                             <button type="submit" class="dropdown-item text-danger border-0 bg-transparent w-100 text-start p-2" style="cursor: pointer;">
                                                 <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
                                             </button>
