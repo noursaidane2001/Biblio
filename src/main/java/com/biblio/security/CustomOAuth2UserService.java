@@ -75,7 +75,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             
             String nom = (familyName != null && familyName.trim().length() >= 2) 
                 ? familyName.trim() 
-                : "OAuth2";
+                : (prenom != null && prenom.trim().length() >= 2 ? prenom.trim() : "Utilisateur");
             if (nom.length() > 50) {
                 nom = nom.substring(0, 50);
             }
