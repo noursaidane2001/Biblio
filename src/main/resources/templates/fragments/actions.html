@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Fragments d’actions</title>
+</head>
+<body>
+    <div th:fragment="borrowButton(livreId)">
+        <button class="btn btn-primary"
+                sec:authorize="hasRole('USAGER') and @securityService.isEmailVerified(#authentication)"
+                th:attr="data-livre-id=${livreId}">
+            <i class="bi bi-book me-2"></i>
+            Emprunter
+        </button>
+    </div>
+
+    <div th:fragment="adminActionButton(label, href)">
+        <a class="btn btn-danger"
+           sec:authorize="hasRole('ADMIN')"
+           th:href="${href}">
+            <i class="bi bi-shield-lock me-2"></i>
+            <span th:text="${label}">Action Admin</span>
+        </a>
+    </div>
+
+    <div th:fragment="bibliothecaireActionButton(label, href)">
+        <a class="btn btn-info"
+           sec:authorize="hasRole('BIBLIOTHECAIRE')"
+           th:href="${href}">
+            <i class="bi bi-people me-2"></i>
+            <span th:text="${label}">Action Bibliothécaire</span>
+        </a>
+    </div>
+</body>
+</html>

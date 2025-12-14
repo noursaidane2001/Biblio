@@ -55,6 +55,21 @@ public class AuthService {
      * Authentifie un utilisateur et retourne access + refresh tokens
      */
     public AuthResponse authenticate(String email, String password) {
+        // Charger l'utilisateur pour vérifier son statut avant l'authentification
+        User user = userDAO.findByEmail(email)
+                .orElseThrow(() -> new org.springframework.security.authentication.BadCredentialsException("Email ou mot de passe incorrect"));
+        
+        // Vérifier explicitement que l'utilisateur est activé (actif ET email vérifié)
+        if (!user.isEnabled()) {
+            if (!user.getActif()) {
+                throw new org.springframework.security.authentication.DisabledException("Votre compte est désactivé. Veuillez contacter l'administrateur.");
+            }
+            if (!user.getEmailVerifie()) {
+                throw new org.springframework.security.authentication.DisabledException("Votre email n'est pas vérifié. Veuillez vérifier votre email avant de vous connecter.");
+            }
+            throw new org.springframework.security.authentication.DisabledException("Votre compte est désactivé ou votre email n'est pas vérifié.");
+        }
+        
         // Authentifier et récupérer l'Authentication qui contient déjà le UserDetails
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(email, password)
@@ -62,14 +77,19 @@ public class AuthService {
 
         // Utiliser le principal de l'Authentication (évite de recharger l'utilisateur)
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        User user = (User) userDetails;
+        User authenticatedUser = (User) userDetails;
+        
+        // Vérification supplémentaire après authentification
+        if (!authenticatedUser.isEnabled()) {
+            throw new org.springframework.security.authentication.DisabledException("Votre compte est désactivé ou votre email n'est pas vérifié.");
+        }
         
         // Générer access + refresh tokens
         String accessToken = jwtService.generateAccessToken(userDetails);
         String refreshToken = jwtService.generateRefreshToken(userDetails);
         
         // Construire les infos utilisateur
-        Map<String, Object> userInfo = getUserInfoMap(user);
+        Map<String, Object> userInfo = getUserInfoMap(authenticatedUser);
 
         return AuthResponse.of(accessToken, refreshToken, accessExpirationSeconds, userInfo);
     }

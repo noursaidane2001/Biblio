@@ -2,6 +2,8 @@
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
     <script>
         // Script global pour ajouter le JWT dans le header Authorization pour toutes les requêtes API
         (function() {
@@ -9,11 +11,22 @@
             const originalFetch = window.fetch;
             window.fetch = function(...args) {
                 const token = localStorage.getItem('jwt');
+                const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
                 if (token && args[0] && typeof args[0] === 'string' && args[0].startsWith('/api/')) {
                     const options = args[1] || {};
                     options.headers = options.headers || {};
                     if (!options.headers['Authorization']) {
                         options.headers['Authorization'] = `Bearer ${token}`;
+                    }
+                    args[1] = options;
+                } else {
+                    const url = args[0];
+                    const options = args[1] || {};
+                    options.headers = options.headers || {};
+                    const method = (options.method || 'GET').toUpperCase();
+                    if (method !== 'GET' && csrfToken && csrfHeader) {
+                        options.headers[csrfHeader] = csrfToken;
                     }
                     args[1] = options;
                 }
@@ -29,25 +42,27 @@
             };
             XMLHttpRequest.prototype.send = function(...args) {
                 const token = localStorage.getItem('jwt');
+                const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
                 if (token && this._url && this._url.startsWith('/api/')) {
                     this.setRequestHeader('Authorization', `Bearer ${token}`);
+                } else {
+                    if (csrfToken && csrfHeader) {
+                        this.setRequestHeader(csrfHeader, csrfToken);
+                    }
                 }
                 return originalSend.apply(this, args);
             };
         })();
         
-        // Nettoyer le localStorage (tokens JWT) lors du logout
         document.addEventListener('DOMContentLoaded', function() {
-            const logoutForm = document.getElementById('logoutForm');
-            if (logoutForm) {
-                logoutForm.addEventListener('submit', function(e) {
-                    // Nettoyer le localStorage pour supprimer les tokens JWT
+            const logoutLink = document.getElementById('logoutLink');
+            if (logoutLink) {
+                logoutLink.addEventListener('click', function() {
                     localStorage.removeItem('jwt');
                     localStorage.removeItem('refreshToken');
-                    // Nettoyer aussi les cookies
                     document.cookie = 'jwt_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
                     document.cookie = 'refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-                    // Laisser Spring Security gérer la redirection normale
                 });
             }
         });
@@ -94,12 +109,9 @@
                                     </li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
-                                        <form th:action="@{/logout}" method="post" style="display: inline; margin: 0;" id="logoutForm">
-                                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                                            <button type="submit" class="dropdown-item text-danger border-0 bg-transparent w-100 text-start p-2" style="cursor: pointer;">
-                                                <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
-                                            </button>
-                                        </form>
+                                        <a href="/login?logout" class="dropdown-item text-danger w-100 text-start p-2" id="logoutLink">
+                                            <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
+                                        </a>
                                     </li>
                                 </ul>
                             </div>

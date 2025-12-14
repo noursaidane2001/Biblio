@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord - Administrateur - Biblio</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" 
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/custom.css}" rel="stylesheet">
+</head>
+<body class="bg-gradient-primary">
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div th:replace="~{fragments/toasts :: toast-container}"></div>
+
+    <div class="container py-5">
+        <!-- Message de bienvenue -->
+        <div class="card shadow-lg border-0 mb-4 animate-fade-in">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-4" 
+                             style="width: 80px; height: 80px; animation: pulse 2s infinite;">
+                            <i class="bi bi-shield-check text-danger" style="font-size: 3rem;"></i>
+                        </div>
+                        <div>
+                            <h1 class="h3 fw-bold text-danger mb-1">
+                                <i class="bi bi-gear-fill me-2"></i>Espace Administrateur
+                            </h1>
+                            <p class="text-muted mb-0">
+                                Bonjour <strong th:text="${user.nomComplet}">Administrateur</strong>, 
+                                gérez l'ensemble du système et des utilisateurs.
+                            </p>
+                        </div>
+                    </div>
+                    <div>
+                        <a th:href="@{/user/profile}" class="btn btn-outline-danger me-2">
+                            <i class="bi bi-person-gear me-2"></i>Mon Profil
+                        </a>
+                        <a href="/login?logout" class="btn btn-outline-secondary" id="logoutLink">
+                            <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques -->
+        <div class="row g-4 mb-4" id="statsCards">
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 50px; height: 50px;">
+                                <i class="bi bi-people text-primary" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted mb-0">Total Utilisateurs</h6>
+                                <h3 class="mb-0" id="totalUsers">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 50px; height: 50px;">
+                                <i class="bi bi-shield-check text-danger" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted mb-0">Administrateurs</h6>
+                                <h3 class="mb-0" id="adminCount">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 50px; height: 50px;">
+                                <i class="bi bi-book-half text-info" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted mb-0">Bibliothécaires</h6>
+                                <h3 class="mb-0" id="bibliothecaireCount">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 50px; height: 50px;">
+                                <i class="bi bi-person-check text-success" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted mb-0">Usagers</h6>
+                                <h3 class="mb-0" id="usagerCount">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglets -->
+        <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" 
+                        type="button" role="tab">
+                    <i class="bi bi-people me-2"></i>Gestion des Utilisateurs
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs" 
+                        type="button" role="tab">
+                    <i class="bi bi-file-earmark-text me-2"></i>Logs Système
+                </button>
+            </li>
+        </ul>
+
+        <!-- Contenu des onglets -->
+        <div class="tab-content" id="adminTabContent">
+            <!-- Onglet Utilisateurs -->
+            <div class="tab-pane fade show active" id="users" role="tabpanel">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-people me-2"></i>Gestion des Utilisateurs
+                        </h5>
+                        <button class="btn btn-light btn-sm" onclick="showCreateUserModal()">
+                            <i class="bi bi-person-plus me-2"></i>Créer un Utilisateur
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="usersTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nom</th>
+                                        <th>Email</th>
+                                        <th>Rôle</th>
+                                        <th>Statut</th>
+                                        <th>Email Vérifié</th>
+                                        <th>Date Inscription</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTableBody">
+                                    <tr>
+                                        <td colspan="8" class="text-center">
+                                            <div class="spinner-border text-danger" role="status">
+                                                <span class="visually-hidden">Chargement...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onglet Logs -->
+            <div class="tab-pane fade" id="logs" role="tabpanel">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-file-earmark-text me-2"></i>Logs Système
+                        </h5>
+                        <button class="btn btn-light btn-sm" onclick="loadLogs()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Actualiser
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="logsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Date/Heure</th>
+                                        <th>Niveau</th>
+                                        <th>Message</th>
+                                        <th>Utilisateur</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logsTableBody">
+                                    <tr>
+                                        <td colspan="4" class="text-center">
+                                            <div class="spinner-border text-info" role="status">
+                                                <span class="visually-hidden">Chargement...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour créer un utilisateur -->
+    <div class="modal fade" id="createUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-plus me-2"></i>Créer un Utilisateur
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="createUserForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="userNom" class="form-label">Nom *</label>
+                            <input type="text" class="form-control" id="userNom" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userPrenom" class="form-label">Prénom *</label>
+                            <input type="text" class="form-control" id="userPrenom" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userEmail" class="form-label">Email *</label>
+                            <input type="email" class="form-control" id="userEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userPassword" class="form-label">Mot de passe *</label>
+                            <input type="password" class="form-control" id="userPassword" required minlength="6">
+                            <small class="text-muted">Minimum 6 caractères</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userRole" class="form-label">Rôle *</label>
+                            <select class="form-select" id="userRole" required>
+                                <option value="">Sélectionner un rôle</option>
+                                <option value="ADMIN">Administrateur</option>
+                                <option value="BIBLIOTHECAIRE">Bibliothécaire</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-check-circle me-2"></i>Créer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    
+    <style>
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .hover-shadow {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .hover-shadow:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        }
+        .badge-role-admin { background-color: #dc3545; }
+        .badge-role-bibliothecaire { background-color: #0dcaf0; }
+        .badge-role-usager { background-color: #198754; }
+        .log-level-INFO { color: #0dcaf0; }
+        .log-level-WARN { color: #ffc107; }
+        .log-level-ERROR { color: #dc3545; }
+    </style>
+    
+    <script th:inline="javascript">
+        // Récupérer le token JWT depuis localStorage
+        function getAuthToken() {
+            return localStorage.getItem('jwt');
+        }
+
+        // Fonction pour faire des requêtes API authentifiées
+        async function apiRequest(url, options = {}) {
+            const token = getAuthToken();
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            };
+            
+            const mergedOptions = {
+                ...defaultOptions,
+                ...options,
+                headers: {
+                    ...defaultOptions.headers,
+                    ...(options.headers || {})
+                }
+            };
+            
+            const response = await fetch(url, mergedOptions);
+            return response.json();
+        }
+
+        // Charger les statistiques
+        async function loadStats() {
+            try {
+                const data = await apiRequest('/api/admin/stats');
+                if (data.success && data.stats) {
+                    document.getElementById('totalUsers').textContent = data.stats.totalUsers || 0;
+                    document.getElementById('adminCount').textContent = data.stats.admins || 0;
+                    document.getElementById('bibliothecaireCount').textContent = data.stats.bibliothecaires || 0;
+                    document.getElementById('usagerCount').textContent = data.stats.usagers || 0;
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des statistiques:', error);
+            }
+        }
+
+        // Charger la liste des utilisateurs
+        async function loadUsers() {
+            try {
+                const data = await apiRequest('/api/admin/users');
+                const tbody = document.getElementById('usersTableBody');
+                
+                if (data.success && data.users) {
+                    if (data.users.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Aucun utilisateur trouvé</td></tr>';
+                        return;
+                    }
+                    
+                    tbody.innerHTML = data.users.map(user => `
+                        <tr>
+                            <td>${user.id}</td>
+                            <td>${user.prenom} ${user.nom}</td>
+                            <td>${user.email}</td>
+                            <td>
+                                <span class="badge badge-role-${user.role.toLowerCase()}">
+                                    ${user.roleDisplay}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge ${user.actif ? 'bg-success' : 'bg-danger'}">
+                                    ${user.actif ? 'Actif' : 'Inactif'}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge ${user.emailVerifie ? 'bg-success' : 'bg-warning'}">
+                                    ${user.emailVerifie ? 'Oui' : 'Non'}
+                                </span>
+                            </td>
+                            <td>${new Date(user.dateInscription).toLocaleDateString('fr-FR')}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-warning me-1" 
+                                        onclick="toggleUserStatus(${user.id})" 
+                                        title="Activer/Désactiver">
+                                    <i class="bi bi-toggle-${user.actif ? 'on' : 'off'}"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="deleteUser(${user.id}, '${user.email}')" 
+                                        title="Supprimer">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Erreur lors du chargement des utilisateurs</td></tr>';
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des utilisateurs:', error);
+                document.getElementById('usersTableBody').innerHTML = 
+                    '<tr><td colspan="8" class="text-center text-danger">Erreur lors du chargement</td></tr>';
+            }
+        }
+
+        // Charger les logs
+        async function loadLogs() {
+            try {
+                const data = await apiRequest('/api/admin/logs?limit=50');
+                const tbody = document.getElementById('logsTableBody');
+                
+                if (data.success && data.logs) {
+                    if (data.logs.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Aucun log disponible</td></tr>';
+                        return;
+                    }
+                    
+                    tbody.innerHTML = data.logs.map(log => `
+                        <tr>
+                            <td>${new Date(log.timestamp).toLocaleString('fr-FR')}</td>
+                            <td>
+                                <span class="log-level-${log.level} fw-bold">${log.level}</span>
+                            </td>
+                            <td>${log.message}</td>
+                            <td>${log.user || '-'}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erreur lors du chargement des logs</td></tr>';
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des logs:', error);
+                document.getElementById('logsTableBody').innerHTML = 
+                    '<tr><td colspan="4" class="text-center text-danger">Erreur lors du chargement</td></tr>';
+            }
+        }
+
+        // Afficher le modal de création
+        function showCreateUserModal() {
+            const modal = new bootstrap.Modal(document.getElementById('createUserModal'));
+            modal.show();
+        }
+
+        // Créer un utilisateur
+        document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                nom: document.getElementById('userNom').value,
+                prenom: document.getElementById('userPrenom').value,
+                email: document.getElementById('userEmail').value,
+                password: document.getElementById('userPassword').value,
+                role: document.getElementById('userRole').value,
+                emailVerifie: true,  // Par défaut, l'email est vérifié pour les comptes créés par l'admin
+                actif: true  // Par défaut, le compte est actif
+            };
+            
+            try {
+                const data = await apiRequest('/api/admin/users', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+                
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('createUserModal')).hide();
+                    document.getElementById('createUserForm').reset();
+                    loadUsers();
+                    loadStats();
+                    alert('Utilisateur créé avec succès !');
+                } else {
+                    alert('Erreur: ' + (data.message || 'Impossible de créer l\'utilisateur'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la création de l\'utilisateur');
+            }
+        });
+
+        // Supprimer un utilisateur
+        async function deleteUser(id, email) {
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur ${email} ?\n\nCette action est irréversible.`)) {
+                return;
+            }
+            
+            try {
+                const data = await apiRequest(`/api/admin/users/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (data.success) {
+                    loadUsers();
+                    loadStats();
+                    alert('Utilisateur supprimé avec succès !');
+                } else {
+                    alert('Erreur: ' + (data.message || 'Impossible de supprimer l\'utilisateur'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la suppression de l\'utilisateur');
+            }
+        }
+
+        // Activer/Désactiver un utilisateur
+        async function toggleUserStatus(id) {
+            try {
+                const data = await apiRequest(`/api/admin/users/${id}/toggle-status`, {
+                    method: 'PUT'
+                });
+                
+                if (data.success) {
+                    loadUsers();
+                    loadStats();
+                } else {
+                    alert('Erreur: ' + (data.message || 'Impossible de modifier le statut'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la modification du statut');
+            }
+        }
+
+        // Initialiser au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadUsers();
+            
+            // Charger les logs quand l'onglet est cliqué
+            document.getElementById('logs-tab').addEventListener('shown.bs.tab', function() {
+                loadLogs();
+            });
+            
+            // Initialiser les toasts Bootstrap
+            const toastElements = document.querySelectorAll('.toast');
+            if (toastElements.length > 0) {
+                toastElements.forEach(function(toastEl) {
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+                        const toast = new bootstrap.Toast(toastEl, {
+                            autohide: true,
+                            delay: 5000
+                        });
+                        toast.show();
+                    } else {
+                        toastEl.classList.add('show');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

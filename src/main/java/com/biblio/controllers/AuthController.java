@@ -41,11 +41,30 @@ public class AuthController {
             result.put("expiresIn", response.expiresIn());
             result.put("user", response.user());
             return ResponseEntity.ok(result);
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Authentication failed");
+            error.put("message", "Email ou mot de passe incorrect");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+        } catch (org.springframework.security.authentication.DisabledException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Account disabled");
+            error.put("message", "Votre compte est désactivé ou votre email n'est pas vérifié. Veuillez vérifier votre email.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+        } catch (org.springframework.security.authentication.LockedException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Account locked");
+            error.put("message", "Votre compte est verrouillé. Veuillez contacter l'administrateur.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
             error.put("error", "Authentication failed");
             error.put("message", e.getMessage() != null ? e.getMessage() : "Identifiants invalides");
+            error.put("exceptionType", e.getClass().getSimpleName());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
         }
     }

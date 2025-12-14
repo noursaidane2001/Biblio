@@ -140,7 +140,8 @@ public class User  implements UserDetails {
 
 	@Override
 	public boolean isEnabled() {
-	    return actif && emailVerifie;
+	    // L'utilisateur doit être actif ET avoir vérifié son email pour pouvoir se connecter
+	    return actif != null && actif && emailVerifie != null && emailVerifie;
 	}
 
 	    public String getNomComplet() {

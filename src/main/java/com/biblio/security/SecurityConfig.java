@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 /**
  * Configuration Spring Security 100% STATELESS avec JWT
@@ -40,8 +41,9 @@ public class SecurityConfig {
             OAuth2JwtSuccessHandler oAuth2JwtSuccessHandler,
             JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) throws Exception {
         http
-                // CSRF actif pour les formulaires Thymeleaf, ignoré pour l'API stateless
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/api/**")
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
                 
                 // Headers
                 .headers(headers -> headers
@@ -55,6 +57,12 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/login?logout")
+                        .deleteCookies("jwt_token", "refresh_token")
+                        .permitAll())
+
                 // Autorizations
                 .authorizeHttpRequests(auth -> auth
                         // Endpoints publics
@@ -77,6 +85,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/login", "/register", "/register/verify", "/oauth2-callback").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/bibliothecaire/**").hasRole("BIBLIOTHECAIRE")
+                        .requestMatchers("/usager/**").authenticated() // Accessible à tous les utilisateurs authentifiés
                         .anyRequest().authenticated())
                 
                 // OAuth2 Login - Génère des JWT
