@@ -128,6 +128,38 @@
 	                </div>
 	            </div>
 	        </div>
+
+	        <!-- Prêts empruntés -->
+	        <div class="card shadow-lg border-0 mb-4">
+	            <div class="card-header bg-success text-white">
+	                <h5 class="mb-0">
+	                    <i class="bi bi-book me-2"></i>Prêts empruntés
+	                </h5>
+	            </div>
+	            <div class="card-body">
+	                <div class="table-responsive">
+	                    <table class="table table-hover align-middle">
+	                        <thead>
+	                            <tr>
+	                                <th>Ressource</th>
+	                                <th>Usager</th>
+	                                <th>Date emprunt</th>
+	                                <th>Retour prévu</th>
+	                                <th>Actions</th>
+	                            </tr>
+	                        </thead>
+	                        <tbody id="pretsEmprunteTbody">
+	                            <tr>
+	                                <td colspan="5" class="text-center text-muted">Chargement...</td>
+	                            </tr>
+	                        </tbody>
+	                    </table>
+	                </div>
+	                <div id="pretsEmprunteEmpty" class="alert alert-info d-none">
+	                    <i class="bi bi-info-circle me-2"></i>Aucun prêt emprunté à afficher.
+	                </div>
+	            </div>
+	        </div>
 	
 	        <!-- Informations du compte -->
 	        <div class="row g-4">
@@ -230,6 +262,110 @@
 	    
 	    <script th:inline="javascript">
 	        const BIB_ID = [[${user.bibliotheque != null ? user.bibliotheque.id : null}]];
+	        
+	        async function loadPretsEmprunte() {
+	            try {
+	                const resp = await fetch('/api/prets/a-retirer', { headers: { 'Accept': 'application/json' } });
+	                const data = await resp.json();
+	                const tbody = document.getElementById('pretsEmprunteTbody');
+	                const empty = document.getElementById('pretsEmprunteEmpty');
+	                if (!tbody) return;
+	                const items = Array.isArray(data.items) ? data.items : [];
+	                const rows = items.filter(it => it.statut === 'EMPRUNTE').map(it => {
+	                    const titre = it.ressource && it.ressource.titre ? it.ressource.titre : 'Ressource';
+	                    const usager = it.utilisateur ? `${it.utilisateur.prenom || ''} ${it.utilisateur.nom || ''}`.trim() : '';
+	                    const dateEmprunt = it.dateEmprunt ? new Date(it.dateEmprunt) : null;
+	                    const dateRetourPrevu = it.dateRetourPrevu ? new Date(it.dateRetourPrevu) : (it.deadlineRetrait ? new Date(it.deadlineRetrait) : null);
+	                    const fmtDT = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '-';
+	                    const fmtD = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '-';
+	                    return `
+	                        <tr>
+	                            <td>
+	                                <div class="fw-semibold">${titre}</div>
+	                                <div class="text-muted small">${it.ressource && it.ressource.auteur ? it.ressource.auteur : ''}</div>
+	                            </td>
+	                            <td>${usager}</td>
+	                            <td>${fmtDT(dateEmprunt)}</td>
+	                            <td>${fmtD(dateRetourPrevu)}</td>
+	                            <td class="text-nowrap">
+	                                <button class="btn btn-sm btn-outline-primary" onclick="relancerPret(${it.id})">📧 Relancer</button>
+	                                <button class="btn btn-sm btn-outline-danger" onclick="annulerPret(${it.id})">❌ Annuler</button>
+	                                <button class="btn btn-sm btn-success" onclick="confirmerRetraitPret(${it.id})">✅ Confirmer retrait</button>
+	                            </td>
+	                        </tr>
+	                    `;
+	                });
+	                if (rows.length === 0) {
+	                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Aucun prêt emprunté à afficher.</td></tr>';
+	                    if (empty) empty.classList.remove('d-none');
+	                } else {
+	                    tbody.innerHTML = rows.join('');
+	                    if (empty) empty.classList.add('d-none');
+	                }
+	            } catch (e) {
+	                const tbody = document.getElementById('pretsEmprunteTbody');
+	                if (tbody) {
+	                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur de chargement</td></tr>';
+	                }
+	            }
+	        }
+	        
+	        async function confirmerRetraitPret(id) {
+	            const btns = document.querySelectorAll(`button[onclick="confirmerRetraitPret(${id})"]`);
+	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+	            try {
+	                const resp = await fetch(`/api/prets/${id}/en-cours`, {
+	                    method: 'PUT',
+	                    headers: { 'Accept': 'application/json' }
+	                });
+	                const data = await resp.json();
+	                if (data && data.success) {
+	                    await loadPretsEmprunte();
+	                } else {
+	                    btns.forEach(b => { b.disabled = false; b.textContent = '✅ Confirmer retrait'; });
+	                }
+	            } catch (_) {
+	                btns.forEach(b => { b.disabled = false; b.textContent = '✅ Confirmer retrait'; });
+	            }
+	        }
+	        
+	        async function relancerPret(id) {
+	            const btns = document.querySelectorAll(`button[onclick="relancerPret(${id})"]`);
+	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+	            try {
+	                const resp = await fetch(`/api/prets/${id}/relancer`, {
+	                    method: 'POST',
+	                    headers: { 'Accept': 'application/json' }
+	                });
+	                const data = await resp.json();
+	                if (data && data.success) {
+	                    btns.forEach(b => { b.disabled = false; b.textContent = '📧 Relancer'; });
+	                } else {
+	                    btns.forEach(b => { b.disabled = false; b.textContent = '📧 Relancer'; });
+	                }
+	            } catch (_) {
+	                btns.forEach(b => { b.disabled = false; b.textContent = '📧 Relancer'; });
+	            }
+	        }
+	        
+	        async function annulerPret(id) {
+	            const btns = document.querySelectorAll(`button[onclick="annulerPret(${id})"]`);
+	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+	            try {
+	                const resp = await fetch(`/api/prets/${id}/annuler`, {
+	                    method: 'PUT',
+	                    headers: { 'Accept': 'application/json' }
+	                });
+	                const data = await resp.json();
+	                if (data && data.success) {
+	                    await loadPretsEmprunte();
+	                } else {
+	                    btns.forEach(b => { b.disabled = false; b.textContent = '❌ Annuler'; });
+	                }
+	            } catch (_) {
+	                btns.forEach(b => { b.disabled = false; b.textContent = '❌ Annuler'; });
+	            }
+	        }
 	        
 	        async function loadReservationsEnAttente() {
 	            try {
@@ -367,6 +503,7 @@
 	            }
 	            loadReservationsEnAttente();
 	            connectReservationsWS();
+	            loadPretsEmprunte();
 	            
 	            const toastElements = document.querySelectorAll('.toast');
 	            if (toastElements.length > 0) {

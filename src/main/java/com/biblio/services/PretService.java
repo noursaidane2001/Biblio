@@ -47,7 +47,6 @@ public class PretService {
             Pret pret = opt.get();
             pret.emprunter();
             pret.setDateRetourPrevu(java.time.LocalDate.now().plusDays(pret.getDureeEmprunt()));
-            pret.mettreEnCours();
             pretDAO.save(pret);
             return Optional.of(pret);
         } else {
@@ -62,7 +61,6 @@ public class PretService {
             pret = pretDAO.save(pret);
             pret.emprunter();
             pret.setDateRetourPrevu(java.time.LocalDate.now().plusDays(pret.getDureeEmprunt()));
-            pret.mettreEnCours();
             pret = pretDAO.save(pret);
             return Optional.of(pret);
         }
@@ -74,12 +72,21 @@ public class PretService {
         return pretDAO.findByUtilisateurId(user.getId());
     }
 
+    public List<Pret> getEmpruntePourBibliotheque(Long bibliothequeId) {
+        return pretDAO.findByBibliothequeAndStatut(bibliothequeId, StatutPret.EMPRUNTE);
+    }
+
     @Transactional
     public Pret marquerEmprunte(Long pretId) {
         Pret pret = pretDAO.findById(pretId)
                 .orElseThrow(() -> new IllegalArgumentException("Pret introuvable"));
         pret.emprunter();
         return pretDAO.save(pret);
+    }
+
+    public Pret getPret(Long pretId) {
+        return pretDAO.findById(pretId)
+                .orElseThrow(() -> new IllegalArgumentException("Pret introuvable"));
     }
 
     @Transactional
@@ -103,6 +110,14 @@ public class PretService {
         Pret pret = pretDAO.findById(pretId)
                 .orElseThrow(() -> new IllegalArgumentException("Pret introuvable"));
         pret.cloturer();
+        return pretDAO.save(pret);
+    }
+
+    @Transactional
+    public Pret annulerPret(Long pretId) {
+        Pret pret = pretDAO.findById(pretId)
+                .orElseThrow(() -> new IllegalArgumentException("Pret introuvable"));
+        pret.annuler();
         return pretDAO.save(pret);
     }
 }
