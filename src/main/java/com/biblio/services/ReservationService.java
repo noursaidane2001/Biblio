@@ -8,6 +8,7 @@ import com.biblio.entities.Reservation;
 import com.biblio.entities.Ressource;
 import com.biblio.entities.User;
 import com.biblio.enums.StatutReservation;
+import com.biblio.services.PretService;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-
 @Service
 public class ReservationService {
 
@@ -26,15 +26,18 @@ public class ReservationService {
     private final RessourceDAO ressourceDAO;
     private final UserDAO userDAO;
     private final EmailService emailService;
+    private final PretService pretService;
     private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     public ReservationService(ReservationDAO reservationDAO, RessourceDAO ressourceDAO, UserDAO userDAO, EmailService emailService,
-                              org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate) {
+                              org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate,
+                              PretService pretService) {
         this.reservationDAO = reservationDAO;
         this.ressourceDAO = ressourceDAO;
         this.userDAO = userDAO;
         this.emailService = emailService;
         this.messagingTemplate = messagingTemplate;
+        this.pretService = pretService;
     }
 
     @Transactional
@@ -58,6 +61,7 @@ public class ReservationService {
 
         Reservation saved = reservationDAO.save(reservation);
 
+        pretService.createFromReservation(saved);
         notifierCreation(usager, saved);
         notifierBibliothecaireNouvelle(bibliotheque, saved);
         pushReservationsEnAttente(bibliotheque.getId());
@@ -106,23 +110,10 @@ public class ReservationService {
 
         reservationDAO.save(reservation);
         ressourceDAO.save(ressource);
+        pretService.mettreEnCoursDepuisReservation(reservation);
 
         notifierConfirmation(reservation);
         pushReservationsEnAttente(bibliothecaire.getBibliotheque().getId());
-        return reservation;
-    }
-
-    @Transactional
-    public Reservation rejeterReservation(Long reservationId, String emailBibliothecaire, String raison) {
-        Reservation reservation = chargerReservation(reservationId);
-        User bibliothecaire = chargerBibliothecaire(emailBibliothecaire);
-        validerMemeBibliotheque(reservation, bibliothecaire);
-
-        reservation.setStatut(StatutReservation.ANNULEE);
-        reservation.setCommentaire(raison);
-        reservationDAO.save(reservation);
-        notifierRejet(reservation);
-        pushReservationsEnAttente(reservation.getBibliotheque().getId());
         return reservation;
     }
 
@@ -133,29 +124,56 @@ public class ReservationService {
         validerMemeBibliotheque(reservation, bibliothecaire);
 
         if (reservation.getStatut() != StatutReservation.CONFIRMEE) {
-            throw new IllegalStateException("Seules les réservations confirmées peuvent être marquées empruntées");
+            throw new IllegalStateException("Seules les réservations confirmées peuvent être mises en emprunt en cours");
         }
         reservation.setStatut(StatutReservation.EMPRUNT_EN_COURS);
+        reservationDAO.save(reservation);
         pushReservationsEnAttente(reservation.getBibliotheque().getId());
-        return reservationDAO.save(reservation);
+        return reservation;
     }
 
     @Transactional
-    public Reservation annulerParUsager(Long reservationId, String emailUsager) {
+    public Reservation annulerParUsager(Long reservationId, String usagerEmail) {
         Reservation reservation = chargerReservation(reservationId);
-        if (!reservation.getUsager().getEmail().equalsIgnoreCase(emailUsager)) {
-            throw new IllegalStateException("L'usager ne peut annuler que ses réservations");
+        User usager = userDAO.findByEmail(usagerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Usager introuvable"));
+        if (!reservation.getUsager().getId().equals(usager.getId())) {
+            throw new IllegalArgumentException("Vous ne pouvez annuler que vos propres réservations");
         }
         if (reservation.getStatut() == StatutReservation.CONFIRMEE || reservation.getStatut() == StatutReservation.EN_ATTENTE) {
-            // Si un exemplaire avait été bloqué, on le libère
-            if (reservation.isExemplaireVerrouille()) {
-                Ressource ressource = reservation.getRessource();
-                ressource.setExemplairesDisponibles(ressource.getExemplairesDisponibles() + 1);
-                ressourceDAO.save(ressource);
-            }
             reservation.setStatut(StatutReservation.ANNULEE);
+            if (reservation.isExemplaireVerrouille()) {
+                Ressource r = reservation.getRessource();
+                r.setExemplairesDisponibles((r.getExemplairesDisponibles() == null ? 0 : r.getExemplairesDisponibles()) + 1);
+                reservation.setExemplaireVerrouille(false);
+                ressourceDAO.save(r);
+            }
             reservationDAO.save(reservation);
+            pushReservationsEnAttente(reservation.getBibliotheque().getId());
+            return reservation;
+        } else {
+            throw new IllegalStateException("La réservation ne peut pas être annulée dans son état actuel");
         }
+    }
+
+    @Transactional
+    public Reservation rejeterReservation(Long reservationId, String emailBibliothecaire, String raison) {
+        Reservation reservation = chargerReservation(reservationId);
+        User bibliothecaire = chargerBibliothecaire(emailBibliothecaire);
+        validerMemeBibliotheque(reservation, bibliothecaire);
+        if (reservation.getStatut() != StatutReservation.EN_ATTENTE) {
+            throw new IllegalStateException("Seules les réservations en attente peuvent être rejetées");
+        }
+        reservation.setStatut(StatutReservation.ANNULEE);
+        reservation.setCommentaire(raison);
+        if (reservation.isExemplaireVerrouille()) {
+            Ressource r = reservation.getRessource();
+            r.setExemplairesDisponibles((r.getExemplairesDisponibles() == null ? 0 : r.getExemplairesDisponibles()) + 1);
+            reservation.setExemplaireVerrouille(false);
+            ressourceDAO.save(r);
+        }
+        reservationDAO.save(reservation);
+        notifierRejet(reservation);
         pushReservationsEnAttente(reservation.getBibliotheque().getId());
         return reservation;
     }
