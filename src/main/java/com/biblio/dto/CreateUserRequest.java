@@ -26,6 +26,8 @@ public record CreateUserRequest(
         @NotNull(message = "Le rôle est obligatoire")
         Role role,
         
+        Long bibliothequeId,
+        
         Boolean emailVerifie,
         
         Boolean actif

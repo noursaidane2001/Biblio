@@ -29,14 +29,28 @@
                             </p>
                             
 
-                <div class="col-md-6 col-lg-4" sec:authorize="hasRole('ADMIN')">
+                <div class="col-md-6 col-lg-4" sec:authorize="hasRole('SUPER_ADMIN')">
+                    <div class="card h-100 shadow-sm border-0">
+                        <div class="card-body">
+                            <h5 class="card-title text-danger">
+                                <i class="bi bi-shield-check me-2"></i>Super Administration
+                            </h5>
+                            <p class="card-text">Gérez l'ensemble du système : bibliothèques, administrateurs et bibliothécaires.</p>
+                            <a th:href="@{/super-admin/dashboard}" class="btn btn-danger w-100">
+                                <i class="bi bi-speedometer2 me-2"></i>Panneau Super Admin
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4" sec:authorize="hasRole('ADMIN') and !hasRole('SUPER_ADMIN')">
                     <div class="card h-100 shadow-sm border-0">
                         <div class="card-body">
                             <h5 class="card-title text-primary">
-                                <i class="bi bi-gear me-2"></i>Administration
+                                <i class="bi bi-gear me-2"></i>Administration Bibliothèque
                             </h5>
-                            <p class="card-text">Accédez au panneau d'administration pour gérer la bibliothèque, les utilisateurs et les ressources.</p>
-                            <a th:href="@{/admin/dashboard}" class="btn btn-primary w-100">
+                            <p class="card-text">Gérez votre bibliothèque, les bibliothécaires et les ressources.</p>
+                            <a th:href="@{/bibliotheque-admin/dashboard}" class="btn btn-primary w-100">
                                 <i class="bi bi-speedometer2 me-2"></i>Panneau Admin
                             </a>
                         </div>

@@ -7,13 +7,14 @@ import java.util.Set;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
 /*import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;*/
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -32,6 +33,7 @@ import lombok.Setter;
 @Builder
 public class Bibliotheque {
 	  @Id
+	  @GeneratedValue(strategy = GenerationType.IDENTITY)
 	  private Long id;
 	  @NotBlank(message = "Le nom de la bibliothèque est obligatoire")
 	  @Column(nullable = false, unique = true, length = 100)
@@ -44,21 +46,9 @@ public class Bibliotheque {
 	    @Column(nullable = false, length = 100)
 	    private String ville;
 
-	    @NotBlank(message = "Le code postal est obligatoire")
-	    @Pattern(regexp = "\\d{4,5}", message = "Format de code postal invalide")
-	    @Column(nullable = false, length = 10)
-	    private String codePostal;
-
 	    @Pattern(regexp = "^\\+?[0-9\\s\\-()]{8,20}$", message = "Format de téléphone invalide")
 	    @Column(length = 20)
 	    private String telephone;
-
-	    @Email(message = "Format d'email invalide")
-	    @Column(length = 100)
-	    private String email;
-
-	    @Column(length = 200)
-	    private String heuresOuverture;
 
 	    @Min(value = 0, message = "La capacité ne peut pas être négative")
 	    private Integer capaciteStock;
@@ -78,6 +68,41 @@ public class Bibliotheque {
 	    @OneToMany(mappedBy = "bibliotheque")
 	    @Builder.Default
 	    private Set<Pret> prets = new HashSet<>();
+
+		public long getId() {
+			// TODO Auto-generated method stub
+			return id;
+		}
+
+		public String getNom() {
+			// TODO Auto-generated method stub
+			return nom;
+		}
+
+		public String getAdresse() {
+			// TODO Auto-generated method stub
+			return adresse;
+		}
+
+		public String getVille() {
+			// TODO Auto-generated method stub
+			return ville;
+		}
+
+		public String getTelephone() {
+			// TODO Auto-generated method stub
+			return telephone;
+		}
+
+		public Integer getCapaciteStock() {
+			// TODO Auto-generated method stub
+			return capaciteStock;
+		}
+
+		public Boolean getActif() {
+			// TODO Auto-generated method stub
+			return actif;
+		}
 
 	 /*   public void addRessource(Ressource ressource) {
 	        ressources.add(ressource);

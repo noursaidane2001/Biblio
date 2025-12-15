@@ -142,8 +142,11 @@
                     let dashboardUrl = '/dashboard';
                     if (data.user && data.user.role) {
                         switch(data.user.role) {
+                            case 'SUPER_ADMIN':
+                                dashboardUrl = '/super-admin/dashboard';
+                                break;
                             case 'ADMIN':
-                                dashboardUrl = '/admin/dashboard';
+                                dashboardUrl = '/bibliotheque-admin/dashboard';
                                 break;
                             case 'BIBLIOTHECAIRE':
                                 dashboardUrl = '/bibliothecaire/dashboard';
@@ -156,14 +159,20 @@
                     // Utiliser window.location.replace pour éviter que l'utilisateur puisse revenir en arrière
                     window.location.replace(dashboardUrl);
                 } else {
-                    // Afficher l'erreur
-                    alert(data.message || 'Erreur de connexion');
+                    // Afficher l'erreur avec le message détaillé
+                    const errorMessage = data.message || data.error || 'Erreur de connexion';
+                    console.error('Erreur de connexion:', data);
+                    alert('Erreur: ' + errorMessage);
                     submitBtn.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i>Se connecter';
                     submitBtn.disabled = false;
                 }
             } catch (error) {
                 console.error('Erreur:', error);
-                alert('Erreur de connexion. Veuillez réessayer.');
+                let errorMessage = 'Erreur de connexion. Veuillez réessayer.';
+                if (error.message) {
+                    errorMessage += '\n\nDétails: ' + error.message;
+                }
+                alert(errorMessage);
                 submitBtn.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i>Se connecter';
                 submitBtn.disabled = false;
             }
