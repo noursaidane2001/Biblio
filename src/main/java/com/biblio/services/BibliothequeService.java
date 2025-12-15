@@ -47,15 +47,35 @@ public class BibliothequeService {
     @Transactional
     public Bibliotheque createBibliotheque(String nom, String adresse, String ville, 
                                           String telephone, Integer capaciteStock) {
+        if (nom == null || nom.trim().isEmpty()) {
+            throw new IllegalArgumentException("Le nom de la bibliothèque est obligatoire");
+        }
+        if (adresse == null || adresse.trim().isEmpty()) {
+            throw new IllegalArgumentException("L'adresse est obligatoire");
+        }
+        if (ville == null || ville.trim().isEmpty()) {
+            throw new IllegalArgumentException("La ville est obligatoire");
+        }
+        String telephoneNorm = telephone != null ? telephone.trim() : null;
+        if (telephoneNorm != null && !telephoneNorm.isEmpty()) {
+            if (!telephoneNorm.matches("^\\+?[0-9\\s\\-()]{8,20}$")) {
+                throw new IllegalArgumentException("Format de téléphone invalide");
+            }
+        } else {
+            telephoneNorm = null;
+        }
+        if (capaciteStock != null && capaciteStock < 0) {
+            throw new IllegalArgumentException("La capacité ne peut pas être négative");
+        }
         if (bibliothequeDAO.existsByNom(nom)) {
             throw new IllegalArgumentException("Une bibliothèque avec ce nom existe déjà");
         }
 
         Bibliotheque bibliotheque = Bibliotheque.builder()
-                .nom(nom)
-                .adresse(adresse)
-                .ville(ville)
-                .telephone(telephone)
+                .nom(nom.trim())
+                .adresse(adresse.trim())
+                .ville(ville.trim())
+                .telephone(telephoneNorm)
                 .capaciteStock(capaciteStock)
                 .actif(true)
                 .build();

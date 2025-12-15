@@ -165,7 +165,6 @@
                             <label for="userRole" class="form-label">Rôle *</label>
                             <select class="form-select" id="userRole" required>
                                 <option value="">Sélectionner un rôle</option>
-                                <option value="ADMIN">Administrateur de bibliothèque</option>
                                 <option value="BIBLIOTHECAIRE">Bibliothécaire</option>
                             </select>
                         </div>
@@ -433,6 +432,27 @@
                 emailVerifie: true,
                 actif: true
             };
+            
+            if (!formData.nom) {
+                alert('Le nom est obligatoire');
+                return;
+            }
+            if (!formData.prenom) {
+                alert('Le prénom est obligatoire');
+                return;
+            }
+            if (!formData.email) {
+                alert('L\'email est obligatoire');
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+                alert('Format d\'email invalide');
+                return;
+            }
+            if (!formData.password || formData.password.length < 6) {
+                alert('Le mot de passe doit contenir au moins 6 caractères');
+                return;
+            }
             
             try {
                 const data = await apiRequest('/api/bibliotheque-admin/utilisateurs', {
