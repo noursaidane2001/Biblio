@@ -398,6 +398,7 @@
     </style>
     
     <script th:inline="javascript">
+        const CURRENT_USER_ID = /*[[${user.id}]]*/ null;
         // Récupérer le token JWT depuis localStorage
         function getAuthToken() {
             return localStorage.getItem('jwt');
@@ -478,6 +479,7 @@
                             <td>
                                 <button class="btn btn-sm btn-outline-warning me-1" 
                                         onclick="toggleUserStatus(${user.id})" 
+                                        ${CURRENT_USER_ID === user.id ? 'disabled title="Action interdite pour votre compte"' : 'title="Activer/Désactiver"'}
                                         title="Activer/Désactiver">
                                     <i class="bi bi-toggle-${user.actif ? 'on' : 'off'}"></i>
                                 </button>
@@ -625,11 +627,35 @@
             // Normaliser les valeurs vides
             const telephoneValue = document.getElementById('biblioTelephone').value.trim();
             const capaciteStockValue = document.getElementById('biblioCapaciteStock').value.trim();
+            const nomValue = document.getElementById('biblioNom').value.trim();
+            const adresseValue = document.getElementById('biblioAdresse').value.trim();
+            const villeValue = document.getElementById('biblioVille').value.trim();
+            
+            if (!nomValue) {
+                alert('Le nom de la bibliothèque est obligatoire');
+                return;
+            }
+            if (!adresseValue) {
+                alert('L\'adresse est obligatoire');
+                return;
+            }
+            if (!villeValue) {
+                alert('La ville est obligatoire');
+                return;
+            }
+            if (capaciteStockValue && parseInt(capaciteStockValue) < 0) {
+                alert('La capacité ne peut pas être négative');
+                return;
+            }
+            if (telephoneValue && !/^\+?[0-9\s\-()]{8,20}$/.test(telephoneValue)) {
+                alert('Format de téléphone invalide');
+                return;
+            }
             
             const formData = {
-                nom: document.getElementById('biblioNom').value.trim(),
-                adresse: document.getElementById('biblioAdresse').value.trim(),
-                ville: document.getElementById('biblioVille').value.trim(),
+                nom: nomValue,
+                adresse: adresseValue,
+                ville: villeValue,
                 telephone: telephoneValue ? telephoneValue : null,
                 capaciteStock: capaciteStockValue ? parseInt(capaciteStockValue) : null
             };
@@ -703,18 +729,42 @@
             
             const role = document.getElementById('userRole').value;
             const bibliothequeId = document.getElementById('userBibliotheque').value;
+            const nom = document.getElementById('userNom').value.trim();
+            const prenom = document.getElementById('userPrenom').value.trim();
+            const email = document.getElementById('userEmail').value.trim();
+            const password = document.getElementById('userPassword').value;
             
             // Vérifier que la bibliothèque est fournie pour les administrateurs et bibliothécaires
             if ((role === 'ADMIN' || role === 'BIBLIOTHECAIRE') && !bibliothequeId) {
                 alert('Veuillez sélectionner une bibliothèque pour l\'administrateur ou le bibliothécaire');
                 return;
             }
+            if (!nom) {
+                alert('Le nom est obligatoire');
+                return;
+            }
+            if (!prenom) {
+                alert('Le prénom est obligatoire');
+                return;
+            }
+            if (!email) {
+                alert('L\'email est obligatoire');
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                alert('Format d\'email invalide');
+                return;
+            }
+            if (!password || password.length < 6) {
+                alert('Le mot de passe doit contenir au moins 6 caractères');
+                return;
+            }
             
             const formData = {
-                nom: document.getElementById('userNom').value,
-                prenom: document.getElementById('userPrenom').value,
-                email: document.getElementById('userEmail').value,
-                password: document.getElementById('userPassword').value,
+                nom: nom,
+                prenom: prenom,
+                email: email,
+                password: password,
                 role: role,
                 bibliothequeId: bibliothequeId ? parseInt(bibliothequeId) : null,
                 emailVerifie: true,  // Par défaut, l'email est vérifié pour les comptes créés par l'admin
@@ -768,6 +818,10 @@
 
         // Activer/Désactiver un utilisateur
         async function toggleUserStatus(id) {
+            if (CURRENT_USER_ID === id) {
+                alert('Vous ne pouvez pas désactiver votre propre compte (super administrateur).');
+                return;
+            }
             try {
                 const data = await apiRequest(`/api/admin/users/${id}/toggle-status`, {
                     method: 'PUT'

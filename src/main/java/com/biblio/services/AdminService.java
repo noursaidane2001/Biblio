@@ -52,6 +52,22 @@ public class AdminService {
     @Transactional
     public User createUser(String nom, String prenom, String email, String password, 
                           Role role, Long bibliothequeId, Boolean emailVerifie, Boolean actif) {
+        if (nom == null || nom.trim().isEmpty()) {
+            throw new IllegalArgumentException("Le nom est obligatoire");
+        }
+        if (prenom == null || prenom.trim().isEmpty()) {
+            throw new IllegalArgumentException("Le prénom est obligatoire");
+        }
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("L'email est obligatoire");
+        }
+        String emailTrimmed = email.trim();
+        if (!emailTrimmed.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+            throw new IllegalArgumentException("Format d'email invalide");
+        }
+        if (password == null || password.length() < 6) {
+            throw new IllegalArgumentException("Le mot de passe doit contenir au moins 6 caractères");
+        }
         if (userDAO.existsByEmail(email)) {
             throw new IllegalArgumentException("Un utilisateur avec cet email existe déjà");
         }
@@ -66,9 +82,9 @@ public class AdminService {
         }
 
         User user = new User();
-        user.setNom(nom);
-        user.setPrenom(prenom);
-        user.setEmail(email);
+        user.setNom(nom.trim());
+        user.setPrenom(prenom.trim());
+        user.setEmail(emailTrimmed);
         user.setMotDePasse(passwordEncoder.encode(password));
         user.setRole(role);
         user.setEmailVerifie(emailVerifie != null ? emailVerifie : true);
