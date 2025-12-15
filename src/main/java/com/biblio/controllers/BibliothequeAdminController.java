@@ -132,7 +132,7 @@ public class BibliothequeAdminController {
 
             Long bibliothequeId = admin.getBibliotheque().getId();
             List<User> utilisateurs = userDAO.findAll().stream()
-                    .filter(u -> (u.getRole() == Role.ADMIN || u.getRole() == Role.BIBLIOTHECAIRE)
+                    .filter(u -> (u.getRole() == Role.BIBLIOTHECAIRE)
                             && u.getBibliotheque() != null
                             && u.getBibliotheque().getId() == bibliothequeId
                     )
@@ -223,12 +223,11 @@ public class BibliothequeAdminController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
             }
 
-            // Seuls les ADMIN et BIBLIOTHECAIRE peuvent être créés (pas USAGER ni SUPER_ADMIN)
-            if (request.role() != Role.ADMIN && request.role() != Role.BIBLIOTHECAIRE) {
+            if (request.role() != Role.BIBLIOTHECAIRE) {
                 Map<String, Object> error = new HashMap<>();
                 error.put("success", false);
                 error.put("error", "Invalid role");
-                error.put("message", "Vous ne pouvez créer que des administrateurs ou des bibliothécaires pour votre bibliothèque");
+                error.put("message", "Vous ne pouvez créer que des bibliothécaires pour votre bibliothèque");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
             }
 
@@ -319,12 +318,11 @@ public class BibliothequeAdminController {
             }
 
 
-            // Vérifier que c'est un ADMIN ou BIBLIOTHECAIRE
-            if (utilisateur.getRole() != Role.ADMIN && utilisateur.getRole() != Role.BIBLIOTHECAIRE) {
+            if (utilisateur.getRole() != Role.BIBLIOTHECAIRE) {
                 Map<String, Object> error = new HashMap<>();
                 error.put("success", false);
                 error.put("error", "Forbidden");
-                error.put("message", "Vous ne pouvez supprimer que les administrateurs et bibliothécaires de votre bibliothèque");
+                error.put("message", "Vous ne pouvez supprimer que les bibliothécaires de votre bibliothèque");
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
             }
 
@@ -388,12 +386,11 @@ public class BibliothequeAdminController {
             }
 
 
-            // Vérifier que c'est un ADMIN ou BIBLIOTHECAIRE
-            if (utilisateur.getRole() != Role.ADMIN && utilisateur.getRole() != Role.BIBLIOTHECAIRE) {
+            if (utilisateur.getRole() != Role.BIBLIOTHECAIRE) {
                 Map<String, Object> error = new HashMap<>();
                 error.put("success", false);
                 error.put("error", "Forbidden");
-                error.put("message", "Vous ne pouvez modifier que les administrateurs et bibliothécaires de votre bibliothèque");
+                error.put("message", "Vous ne pouvez modifier que les bibliothécaires de votre bibliothèque");
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
             }
 

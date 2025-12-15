@@ -177,8 +177,20 @@ public class AdminController {
      * Active ou désactive un utilisateur
      */
     @PutMapping("/users/{id}/toggle-status")
-    public ResponseEntity<Map<String, Object>> toggleUserStatus(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> toggleUserStatus(@PathVariable Long id,
+                                                                @AuthenticationPrincipal UserDetails currentUser) {
         try {
+            if (currentUser != null) {
+                User currentUserEntity = userDAO.findByEmail(currentUser.getUsername())
+                        .orElseThrow(() -> new IllegalArgumentException("Utilisateur actuel non trouvé"));
+                if (currentUserEntity.getId().equals(id) && currentUserEntity.isSuperAdmin()) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("success", false);
+                    error.put("error", "Cannot disable yourself");
+                    error.put("message", "Le super administrateur ne peut pas désactiver son propre compte");
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+                }
+            }
             User user = adminService.toggleUserStatus(id);
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
