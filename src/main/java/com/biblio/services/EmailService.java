@@ -63,7 +63,7 @@ public class EmailService {
             throw new RuntimeException("Impossible d'envoyer l'email de vérification", e);
         }
     }
-    
+
     public void sendReservationConfirmationEmail(String toEmail, String nom, String prenom, String titreRessource, String deadlineRetraitDisplay) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
@@ -87,6 +87,35 @@ public class EmailService {
         } catch (Exception e) {
             logger.error("Erreur lors de l'envoi de l'email de confirmation à {} : {}", toEmail, e.getMessage(), e);
             throw new RuntimeException("Impossible d'envoyer l'email de confirmation de réservation", e);
+        }
+    }
+
+    public void sendPretRetraitReminderEmail(String toEmail, String nom, String prenom, String titreRessource, String bibliothequeNom, String deadlineRetraitDisplay) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Rappel de retrait de votre livre - Biblio");
+            String body = String.format(
+                "Bonjour %s %s,\n\n" +
+                "Ceci est un rappel pour retirer votre livre \"%s\" à la bibliothèque%s.\n" +
+                "%s\n\n" +
+                "Si vous ne pouvez pas vous déplacer, vous pouvez annuler la réservation pour libérer l'exemplaire.\n\n" +
+                "Cordialement,\n" +
+                "Votre bibliothèque",
+                prenom, nom,
+                titreRessource != null ? titreRessource : "Ressource",
+                bibliothequeNom != null ? " \"" + bibliothequeNom + "\"" : "",
+                (deadlineRetraitDisplay != null && !deadlineRetraitDisplay.isBlank())
+                        ? "Date limite de retrait: " + deadlineRetraitDisplay
+                        : "La date limite de retrait sera bientôt atteinte."
+            );
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Email de rappel de retrait envoyé à : {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Erreur lors de l'envoi de l'email de rappel à {} : {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Impossible d'envoyer l'email de rappel de retrait", e);
         }
     }
 }

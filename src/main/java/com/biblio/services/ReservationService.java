@@ -85,6 +85,31 @@ public class ReservationService {
         return reservationDAO.findByBibliothequeAndStatut(biblio.getId(), StatutReservation.EN_ATTENTE);
     }
 
+    public java.util.Optional<Reservation> trouverReservationLiee(Long usagerId, Long ressourceId) {
+        List<StatutReservation> statuts = java.util.List.of(StatutReservation.CONFIRMEE, StatutReservation.EN_ATTENTE);
+        List<Reservation> list = reservationDAO.findByUsagerAndRessourceAndStatutIn(usagerId, ressourceId, statuts);
+        return list.stream().findFirst();
+    }
+
+    @Transactional
+    public boolean annulerReservationLiee(Long usagerId, Long ressourceId) {
+        java.util.Optional<Reservation> opt = trouverReservationLiee(usagerId, ressourceId);
+        if (opt.isEmpty()) {
+            return false;
+        }
+        Reservation reservation = opt.get();
+        reservation.setStatut(StatutReservation.ANNULEE);
+        if (reservation.isExemplaireVerrouille()) {
+            Ressource r = reservation.getRessource();
+            r.setExemplairesDisponibles((r.getExemplairesDisponibles() == null ? 0 : r.getExemplairesDisponibles()) + 1);
+            reservation.setExemplaireVerrouille(false);
+            ressourceDAO.save(r);
+        }
+        reservationDAO.save(reservation);
+        pushReservationsEnAttente(reservation.getBibliotheque().getId());
+        return true;
+    }
+
     @Transactional
     public Reservation confirmerReservation(Long reservationId, String emailBibliothecaire, String commentaire) {
         Reservation reservation = chargerReservation(reservationId);

@@ -84,6 +84,11 @@ public class PretService {
         return pretDAO.save(pret);
     }
 
+    public Pret getPret(Long pretId) {
+        return pretDAO.findById(pretId)
+                .orElseThrow(() -> new IllegalArgumentException("Pret introuvable"));
+    }
+
     @Transactional
     public Pret mettreEnCours(Long pretId) {
         Pret pret = pretDAO.findById(pretId)

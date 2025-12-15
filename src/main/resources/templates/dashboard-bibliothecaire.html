@@ -329,6 +329,44 @@
 	            }
 	        }
 	        
+	        async function relancerPret(id) {
+	            const btns = document.querySelectorAll(`button[onclick="relancerPret(${id})"]`);
+	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+	            try {
+	                const resp = await fetch(`/api/prets/${id}/relancer`, {
+	                    method: 'POST',
+	                    headers: { 'Accept': 'application/json' }
+	                });
+	                const data = await resp.json();
+	                if (data && data.success) {
+	                    btns.forEach(b => { b.disabled = false; b.textContent = '📧 Relancer'; });
+	                } else {
+	                    btns.forEach(b => { b.disabled = false; b.textContent = '📧 Relancer'; });
+	                }
+	            } catch (_) {
+	                btns.forEach(b => { b.disabled = false; b.textContent = '📧 Relancer'; });
+	            }
+	        }
+	        
+	        async function annulerPret(id) {
+	            const btns = document.querySelectorAll(`button[onclick="annulerPret(${id})"]`);
+	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+	            try {
+	                const resp = await fetch(`/api/prets/${id}/annuler`, {
+	                    method: 'PUT',
+	                    headers: { 'Accept': 'application/json' }
+	                });
+	                const data = await resp.json();
+	                if (data && data.success) {
+	                    await loadPretsEmprunte();
+	                } else {
+	                    btns.forEach(b => { b.disabled = false; b.textContent = '❌ Annuler'; });
+	                }
+	            } catch (_) {
+	                btns.forEach(b => { b.disabled = false; b.textContent = '❌ Annuler'; });
+	            }
+	        }
+	        
 	        async function loadReservationsEnAttente() {
 	            try {
 	                const resp = await fetch('/api/reservations/en-attente', {

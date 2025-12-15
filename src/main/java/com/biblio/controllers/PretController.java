@@ -4,6 +4,8 @@ import com.biblio.dao.UserDAO;
 import com.biblio.entities.Pret;
 import com.biblio.entities.User;
 import com.biblio.services.PretService;
+import com.biblio.services.EmailService;
+import com.biblio.services.ReservationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,10 +23,14 @@ public class PretController {
 
     private final PretService pretService;
     private final UserDAO userDAO;
+    private final EmailService emailService;
+    private final ReservationService reservationService;
 
-    public PretController(PretService pretService, UserDAO userDAO) {
+    public PretController(PretService pretService, UserDAO userDAO, EmailService emailService, ReservationService reservationService) {
         this.pretService = pretService;
         this.userDAO = userDAO;
+        this.emailService = emailService;
+        this.reservationService = reservationService;
     }
 
     @GetMapping("/mes-prets")
@@ -89,6 +95,40 @@ public class PretController {
     public ResponseEntity<Map<String, Object>> cloturerPret(@PathVariable Long id) {
         Pret pret = pretService.cloturer(id);
         return ResponseEntity.ok(Map.of("success", true, "pret", toDto(pret)));
+    }
+
+    @PostMapping("/{id}/relancer")
+    @PreAuthorize("hasAnyRole('BIBLIOTHECAIRE','ADMIN')")
+    public ResponseEntity<Map<String, Object>> relancerRetrait(@PathVariable Long id) {
+        Pret pret = pretService.getPret(id);
+        String toEmail = pret.getUtilisateur() != null ? pret.getUtilisateur().getEmail() : null;
+        String nom = pret.getUtilisateur() != null ? pret.getUtilisateur().getNom() : null;
+        String prenom = pret.getUtilisateur() != null ? pret.getUtilisateur().getPrenom() : null;
+        String titre = pret.getRessource() != null ? pret.getRessource().getTitre() : null;
+        String biblioNom = pret.getBibliotheque() != null ? pret.getBibliotheque().getNom() : null;
+        String deadline = reservationService
+                .trouverReservationLiee(
+                        pret.getUtilisateur() != null ? pret.getUtilisateur().getId() : null,
+                        pret.getRessource() != null ? pret.getRessource().getId() : null
+                )
+                .map(r -> r.getDeadlineRetrait() != null ? r.getDeadlineRetrait().toString() : null)
+                .orElse(null);
+        if (toEmail != null) {
+            emailService.sendPretRetraitReminderEmail(toEmail, nom, prenom, titre, biblioNom, deadline);
+        }
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    @PutMapping("/{id}/annuler")
+    @PreAuthorize("hasAnyRole('BIBLIOTHECAIRE','ADMIN')")
+    public ResponseEntity<Map<String, Object>> annulerPretEtReservation(@PathVariable Long id) {
+        Pret pret = pretService.getPret(id);
+        Pret updated = pretService.annulerPret(id);
+        reservationService.annulerReservationLiee(
+                pret.getUtilisateur() != null ? pret.getUtilisateur().getId() : null,
+                pret.getRessource() != null ? pret.getRessource().getId() : null
+        );
+        return ResponseEntity.ok(Map.of("success", true, "pret", toDto(updated)));
     }
 
     private Map<String, Object> toDto(Pret p) {
