@@ -176,7 +176,54 @@
             </div>
         </div>
 
-        
+        <!-- Explorer le catalogue -->
+        <div class="card shadow-lg border-0 mt-4">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="mb-0"><i class="bi bi-search me-2"></i>Explorer le catalogue</h5>
+                <span class="badge bg-light text-info fw-semibold" id="catalogResultsCount">0 résultat</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 align-items-end mb-4">
+                    <div class="col-md-6">
+                        <label for="catalogSearch" class="form-label fw-semibold text-muted">Rechercher par titre ou auteur</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white text-muted"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" id="catalogSearch" placeholder="Ex: Hugo, programmation, poésie...">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="catalogCategorie" class="form-label fw-semibold text-muted">Catégorie</label>
+                        <select class="form-select" id="catalogCategorie">
+                            <option value="">Toutes les catégories</option>
+                            <option value="LITTERATURE">Littérature</option>
+                            <option value="SCIENCES">Sciences</option>
+                            <option value="MULTIMEDIA">Multimédia</option>
+                            <option value="JEUNESSE">Jeunesse</option>
+                            <option value="HISTOIRE">Histoire</option>
+                            <option value="TECHNOLOGIE">Technologie</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 text-md-end">
+                        <button class="btn btn-outline-secondary w-100" id="catalogReset">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Réinitialiser
+                        </button>
+                    </div>
+                </div>
+
+                <div id="catalogLoader" class="text-center py-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <p class="text-muted mb-0">Chargement du catalogue...</p>
+                </div>
+
+                <div id="catalogEmpty" class="alert alert-info d-none">
+                    Aucun résultat ne correspond à votre recherche. Essayez d'élargir les filtres ou de modifier le mot-clé.
+                </div>
+
+                <div class="row g-4" id="catalogGrid"></div>
+            </div>
+        </div>
     </div>
 
     <div th:replace="~{fragments/footer :: footer}"></div>
@@ -206,7 +253,32 @@
     </style>
     
     <script th:inline="javascript">
+        const CATALOG_CATEGORY_LABELS = {
+            'LITTERATURE': 'Littérature',
+            'SCIENCES': 'Sciences',
+            'MULTIMEDIA': 'Multimédia',
+            'JEUNESSE': 'Jeunesse',
+            'HISTOIRE': 'Histoire',
+            'TECHNOLOGIE': 'Technologie'
+        };
+
+        const CATALOG_TYPE_LABELS = {
+            'LIVRE': 'Livre',
+            'EBOOK': 'E-book',
+            'DVD': 'DVD',
+            'REVUE': 'Revue',
+            'CD': 'CD'
+        };
+
+        let catalogData = [];
+        let filteredCatalogData = [];
+
         document.addEventListener('DOMContentLoaded', async function() {
+            await chargerInfosPrets();
+            await initCatalogueSection();
+        });
+
+        async function chargerInfosPrets() {
             try {
                 const res = await fetch('/api/prets/mes-prets');
                 const data = await res.json();
@@ -268,7 +340,137 @@
                 document.getElementById('pretsEmpty').style.display = 'block';
                 document.getElementById('recoList').innerHTML = '<li class="list-group-item">Recommandations indisponibles.</li>';
             }
-        });
+        }
+
+        async function initCatalogueSection() {
+            const searchInput = document.getElementById('catalogSearch');
+            if (!searchInput) return;
+
+            const categorieSelect = document.getElementById('catalogCategorie');
+            const resetBtn = document.getElementById('catalogReset');
+
+            searchInput.addEventListener('input', () => applyCatalogueFilters());
+            categorieSelect.addEventListener('change', () => applyCatalogueFilters());
+            resetBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                categorieSelect.value = '';
+                applyCatalogueFilters();
+            });
+
+            await loadCatalogueData();
+        }
+
+        async function loadCatalogueData() {
+            const loader = document.getElementById('catalogLoader');
+            const empty = document.getElementById('catalogEmpty');
+            const grid = document.getElementById('catalogGrid');
+            const countBadge = document.getElementById('catalogResultsCount');
+
+            loader.style.display = 'block';
+            empty.classList.add('d-none');
+            grid.innerHTML = '';
+            countBadge.textContent = 'Chargement...';
+
+            try {
+                const token = localStorage.getItem('jwt');
+                const response = await fetch('/api/ressources', {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Impossible de récupérer les ressources');
+                }
+                catalogData = data.ressources || [];
+                filteredCatalogData = [...catalogData];
+                applyCatalogueFilters();
+            } catch (error) {
+                console.error('Catalogue error:', error);
+                empty.classList.remove('d-none');
+                empty.textContent = "Impossible de charger les ressources pour le moment.";
+                catalogData = [];
+                filteredCatalogData = [];
+                document.getElementById('catalogGrid').innerHTML = '';
+                document.getElementById('catalogResultsCount').textContent = '0 résultat';
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        function applyCatalogueFilters() {
+            const searchValue = document.getElementById('catalogSearch').value.trim().toLowerCase();
+            const categorieValue = document.getElementById('catalogCategorie').value;
+
+            filteredCatalogData = catalogData.filter(item => {
+                const matchesSearch = !searchValue || [
+                    item.titre,
+                    item.auteur,
+                    item.description,
+                    item.editeur
+                ].some(field => field && field.toLowerCase().includes(searchValue));
+
+                const matchesCategorie = !categorieValue || item.categorie === categorieValue;
+                return matchesSearch && matchesCategorie;
+            });
+
+            renderCatalogue();
+        }
+
+        function renderCatalogue() {
+            const grid = document.getElementById('catalogGrid');
+            const empty = document.getElementById('catalogEmpty');
+            const countBadge = document.getElementById('catalogResultsCount');
+
+            if (filteredCatalogData.length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('d-none');
+                countBadge.textContent = '0 résultat';
+                return;
+            }
+
+            empty.classList.add('d-none');
+            countBadge.textContent = filteredCatalogData.length + (filteredCatalogData.length > 1 ? ' résultats' : ' résultat');
+
+            grid.innerHTML = filteredCatalogData.map(createCatalogueCard).join('');
+        }
+
+        function createCatalogueCard(ressource) {
+            const categorie = CATALOG_CATEGORY_LABELS[ressource.categorie] || 'Divers';
+            const type = CATALOG_TYPE_LABELS[ressource.typeRessource] || 'Ressource';
+            const cover = ressource.imageCouverture || 'https://illustrations.popsy.co/gray/bookshelf.svg';
+            const disponibles = ressource.exemplairesDisponibles ?? 0;
+
+            return `
+                <div class="col-md-6 col-xl-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="ratio ratio-16x9 rounded-top" style="overflow:hidden;">
+                            <img src="${cover}" alt="${ressource.titre || 'Ressource'}" class="w-100 h-100" style="object-fit: cover;">
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                                <span class="badge bg-primary-subtle text-primary">${categorie}</span>
+                                <span class="badge bg-secondary-subtle text-secondary">${type}</span>
+                            </div>
+                            <h5 class="fw-bold mb-1">${ressource.titre || 'Titre non renseigné'}</h5>
+                            <p class="text-muted small mb-2"><i class="bi bi-pen me-1"></i>${ressource.auteur || 'Auteur inconnu'}</p>
+                            <p class="text-muted small mb-3">${truncateText(ressource.description || 'Aucune description disponible.', 120)}</p>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="badge ${disponibles > 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">
+                                    ${disponibles > 0 ? disponibles + ' disponibles' : 'Indisponible'}
+                                </span>
+                                <button class="btn btn-sm btn-outline-primary" ${disponibles === 0 ? 'disabled' : ''}>
+                                    <i class="bi bi-bookmark-plus me-1"></i>Réserver
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function truncateText(text, max) {
+            if (!text) return '';
+            return text.length > max ? text.substring(0, max).trim() + '…' : text;
+        }
     </script>
 </body>
 </html>
