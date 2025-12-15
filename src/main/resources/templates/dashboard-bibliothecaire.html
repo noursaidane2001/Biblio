@@ -310,6 +310,25 @@
 	            }
 	        }
 	        
+	        async function confirmerRetraitPret(id) {
+	            const btns = document.querySelectorAll(`button[onclick="confirmerRetraitPret(${id})"]`);
+	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+	            try {
+	                const resp = await fetch(`/api/prets/${id}/en-cours`, {
+	                    method: 'PUT',
+	                    headers: { 'Accept': 'application/json' }
+	                });
+	                const data = await resp.json();
+	                if (data && data.success) {
+	                    await loadPretsEmprunte();
+	                } else {
+	                    btns.forEach(b => { b.disabled = false; b.textContent = '✅ Confirmer retrait'; });
+	                }
+	            } catch (_) {
+	                btns.forEach(b => { b.disabled = false; b.textContent = '✅ Confirmer retrait'; });
+	            }
+	        }
+	        
 	        async function loadReservationsEnAttente() {
 	            try {
 	                const resp = await fetch('/api/reservations/en-attente', {
