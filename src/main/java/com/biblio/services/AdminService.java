@@ -38,6 +38,15 @@ public class AdminService {
         return userDAO.findAllOrderByDateInscriptionDesc();
     }
 
+    public org.springframework.data.domain.Page<User> getUsersPage(int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+                Math.max(page, 0),
+                Math.max(size, 1),
+                org.springframework.data.domain.Sort.by("dateInscription").descending()
+        );
+        return userDAO.findAll(pageable);
+    }
+
     /**
      * Récupère un utilisateur par son ID
      */

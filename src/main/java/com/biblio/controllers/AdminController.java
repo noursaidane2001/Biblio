@@ -40,16 +40,22 @@ public class AdminController {
      * Liste tous les utilisateurs
      */
     @GetMapping("/users")
-    public ResponseEntity<Map<String, Object>> getAllUsers() {
+    public ResponseEntity<Map<String, Object>> getAllUsers(
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer size) {
         try {
-            List<Map<String, Object>> users = adminService.getAllUsers().stream()
-                    .map(this::userToMap)
-                    .collect(Collectors.toList());
-            
+            var paged = adminService.getUsersPage(page, size);
+            List<Map<String, Object>> users = paged.getContent().stream().map(this::userToMap).collect(Collectors.toList());
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("users", users);
-            result.put("total", users.size());
+            result.put("page", paged.getNumber());
+            result.put("size", paged.getSize());
+            result.put("totalElements", paged.getTotalElements());
+            result.put("totalPages", paged.getTotalPages());
+            result.put("hasNext", paged.hasNext());
+            result.put("hasPrevious", paged.hasPrevious());
+            result.put("total", paged.getTotalElements());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();

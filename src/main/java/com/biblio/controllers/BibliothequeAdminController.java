@@ -117,7 +117,9 @@ public class BibliothequeAdminController {
      */
     @GetMapping("/utilisateurs")
     public ResponseEntity<Map<String, Object>> getMyUtilisateurs(
-            @AuthenticationPrincipal UserDetails currentUser) {
+            @AuthenticationPrincipal UserDetails currentUser,
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer size) {
         try {
             User admin = userDAO.findByEmail(currentUser.getUsername())
                     .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
@@ -131,22 +133,27 @@ public class BibliothequeAdminController {
             }
 
             Long bibliothequeId = admin.getBibliotheque().getId();
-            List<User> utilisateurs = userDAO.findAll().stream()
-                    .filter(u -> (u.getRole() == Role.BIBLIOTHECAIRE)
-                            && u.getBibliotheque() != null
-                            && u.getBibliotheque().getId() == bibliothequeId
-                    )
-                    .collect(Collectors.toList());
+            var pageable = org.springframework.data.domain.PageRequest.of(
+                    Math.max(page, 0),
+                    Math.max(size, 1),
+                    org.springframework.data.domain.Sort.by("dateInscription").descending()
+            );
+            var paged = userDAO.findByBibliotheque_IdAndRole(bibliothequeId, Role.BIBLIOTHECAIRE, pageable);
 
-
-            List<Map<String, Object>> utilisateursList = utilisateurs.stream()
+            List<Map<String, Object>> utilisateursList = paged.getContent().stream()
                     .map(this::userToMap)
                     .collect(Collectors.toList());
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("utilisateurs", utilisateursList);
-            result.put("total", utilisateursList.size());
+            result.put("page", paged.getNumber());
+            result.put("size", paged.getSize());
+            result.put("totalElements", paged.getTotalElements());
+            result.put("totalPages", paged.getTotalPages());
+            result.put("hasNext", paged.hasNext());
+            result.put("hasPrevious", paged.hasPrevious());
+            result.put("total", paged.getTotalElements());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
