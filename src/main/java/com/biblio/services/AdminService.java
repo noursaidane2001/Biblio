@@ -1,6 +1,8 @@
 package com.biblio.services;
 
+import com.biblio.dao.BibliothequeDAO;
 import com.biblio.dao.UserDAO;
+import com.biblio.entities.Bibliotheque;
 import com.biblio.entities.User;
 import com.biblio.enums.Role;
 import org.slf4j.Logger;
@@ -20,10 +22,12 @@ public class AdminService {
     private static final Logger logger = LoggerFactory.getLogger(AdminService.class);
     
     private final UserDAO userDAO;
+    private final BibliothequeDAO bibliothequeDAO;
     private final PasswordEncoder passwordEncoder;
 
-    public AdminService(UserDAO userDAO, PasswordEncoder passwordEncoder) {
+    public AdminService(UserDAO userDAO, BibliothequeDAO bibliothequeDAO, PasswordEncoder passwordEncoder) {
         this.userDAO = userDAO;
+        this.bibliothequeDAO = bibliothequeDAO;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -47,13 +51,18 @@ public class AdminService {
      */
     @Transactional
     public User createUser(String nom, String prenom, String email, String password, 
-                          Role role, Boolean emailVerifie, Boolean actif) {
+                          Role role, Long bibliothequeId, Boolean emailVerifie, Boolean actif) {
         if (userDAO.existsByEmail(email)) {
             throw new IllegalArgumentException("Un utilisateur avec cet email existe déjà");
         }
 
         if (role == Role.USAGER) {
             throw new IllegalArgumentException("Les administrateurs ne peuvent créer que des comptes ADMIN ou BIBLIOTHECAIRE");
+        }
+
+        // ADMIN et BIBLIOTHECAIRE doivent être associés à une bibliothèque
+        if ((role == Role.ADMIN || role == Role.BIBLIOTHECAIRE) && bibliothequeId == null) {
+            throw new IllegalArgumentException("Les administrateurs et bibliothécaires doivent être associés à une bibliothèque");
         }
 
         User user = new User();
@@ -66,8 +75,17 @@ public class AdminService {
         user.setActif(actif != null ? actif : true);
         user.setDateInscription(LocalDateTime.now());
 
+        // Associer la bibliothèque (obligatoire pour ADMIN et BIBLIOTHECAIRE)
+        if (bibliothequeId != null) {
+            Bibliotheque bibliotheque = bibliothequeDAO.findById(bibliothequeId)
+                    .orElseThrow(() -> new IllegalArgumentException("Bibliothèque non trouvée avec l'ID: " + bibliothequeId));
+            user.setBibliotheque(bibliotheque);
+        }
+
         User savedUser = userDAO.save(user);
-        logger.info("Utilisateur créé par admin: {} (ID: {}, Rôle: {})", email, savedUser.getId(), role);
+        logger.info("Utilisateur créé par admin: {} (ID: {}, Rôle: {}, Bibliothèque: {})", 
+                email, savedUser.getId(), role, 
+                savedUser.getBibliotheque() != null ? savedUser.getBibliotheque().getNom() : "Aucune");
         
         return savedUser;
     }

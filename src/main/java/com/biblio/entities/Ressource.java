@@ -1,10 +1,12 @@
 package com.biblio.entities;
+
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Version;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -30,9 +32,9 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
 @Entity
 @Table(name = "ressources", indexes = {
     @Index(name = "idx_ressource_titre", columnList = "titre"),
@@ -40,7 +42,6 @@ import lombok.Setter;
     @Index(name = "idx_ressource_categorie", columnList = "categorie"),
     @Index(name = "idx_ressource_isbn", columnList = "isbn", unique = true)
 })
-@Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -104,8 +105,10 @@ public class Ressource {
     private Integer popularite = 0;
 
     @Column(nullable = false)
-    @Builder.Default
-    private LocalDateTime dateAjout = LocalDateTime.now();
+    private LocalDateTime dateAjout;
+
+    @Version
+    private Long version;
 
     @ManyToOne
     @JoinColumn(name = "bibliotheque_id", nullable = false)
@@ -113,10 +116,96 @@ public class Ressource {
 
     @OneToMany(mappedBy = "ressource", cascade = CascadeType.ALL)
     @Builder.Default
-    private Set<Pret> prets = new HashSet <> ();
+    private Set<Pret> prets = new HashSet<>();
+
+    // ==================== GETTERS ====================
+    
+    public Long getId() {
+        return id;
+    }
+
+    public String getTitre() {
+        return titre;
+    }
+
+    public String getAuteur() {
+        return auteur;
+    }
+
+    public String getIsbn() {
+        return isbn;
+    }
+
+    public Categorie getCategorie() {
+        return categorie;
+    }
+
+    public TypeRessource getTypeRessource() {
+        return typeRessource;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getEditeur() {
+        return editeur;
+    }
+
+    public LocalDate getDatePublication() {
+        return datePublication;
+    }
+
+    public Integer getNombreExemplaires() {
+        return nombreExemplaires;
+    }
+
+    public Integer getExemplairesDisponibles() {
+        return exemplairesDisponibles;
+    }
+
+    public String getImageCouverture() {
+        return imageCouverture;
+    }
+
+    public Integer getPopularite() {
+        return popularite;
+    }
+
+    public LocalDateTime getDateAjout() {
+        return dateAjout;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public Bibliotheque getBibliotheque() {
+        return bibliotheque;
+    }
+
+    public Set<Pret> getPrets() {
+        return prets;
+    }
+
+    // ==================== LIFECYCLE HOOKS ====================
 
     @PrePersist
+    private void onCreate() {
+        if (dateAjout == null) {
+            dateAjout = LocalDateTime.now();
+        }
+        if (popularite == null) {
+            popularite = 0;
+        }
+        validateExemplaires();
+    }
+
     @PreUpdate
+    private void onUpdate() {
+        validateExemplaires();
+    }
+
     private void validateExemplaires() {
         if (exemplairesDisponibles > nombreExemplaires) {
             throw new IllegalStateException(
@@ -124,6 +213,8 @@ public class Ressource {
             );
         }
     }
+
+    // ==================== BUSINESS METHODS ====================
 
     public boolean isDisponible() {
         return exemplairesDisponibles > 0;

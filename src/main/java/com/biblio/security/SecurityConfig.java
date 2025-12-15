@@ -39,7 +39,8 @@ public class SecurityConfig {
             JwtAuthFilter jwtAuthFilter,
             CustomOAuth2UserService oAuth2UserService,
             OAuth2JwtSuccessHandler oAuth2JwtSuccessHandler,
-            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) throws Exception {
+            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
+            JwtAccessDeniedHandler jwtAccessDeniedHandler) throws Exception {
         http
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/api/**")
@@ -55,7 +56,8 @@ public class SecurityConfig {
                 
                 // Exception Handling - Retourner JSON au lieu de rediriger
                 .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(jwtAuthenticationEntryPoint))
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                        .accessDeniedHandler(jwtAccessDeniedHandler))
                 
                 .logout(logout -> logout
                         .logoutUrl("/logout")
@@ -77,13 +79,16 @@ public class SecurityConfig {
                                 "/h2-console/**"
                         ).permitAll()
                         // Endpoints protégés par rôles
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+                        .requestMatchers("/api/bibliotheque-admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/bibliothecaire/**").hasRole("BIBLIOTHECAIRE")
                         // Tous les autres endpoints API nécessitent une authentification
                         .requestMatchers("/api/**").authenticated()
                         // Endpoints web (pour compatibilité avec les templates Thymeleaf)
                         .requestMatchers("/", "/login", "/register", "/register/verify", "/oauth2-callback").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/super-admin/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+                        .requestMatchers("/bibliotheque-admin/**").hasRole("ADMIN")
                         .requestMatchers("/bibliothecaire/**").hasRole("BIBLIOTHECAIRE")
                         .requestMatchers("/usager/**").authenticated() // Accessible à tous les utilisateurs authentifiés
                         .anyRequest().authenticated())

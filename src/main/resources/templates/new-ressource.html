@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajouter une ressource - Biblio</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" 
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/custom.css}" rel="stylesheet">
+</head>
+<body class="bg-gradient-primary">
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div th:replace="~{fragments/toasts :: toast-container}"></div>
+
+    <div class="container py-5">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a th:href="@{/}" class="text-decoration-none">Accueil</a></li>
+                <li class="breadcrumb-item"><a th:href="@{/bibliothecaire/dashboard}" class="text-decoration-none">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Ajouter une ressource</li>
+            </ol>
+        </nav>
+
+        <!-- Titre de la page -->
+        <div class="card shadow-lg border-0 mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center">
+                    <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" 
+                         style="width: 60px; height: 60px;">
+                        <i class="bi bi-plus-circle text-info" style="font-size: 2rem;"></i>
+                    </div>
+                    <div>
+                        <h1 class="h3 fw-bold text-info mb-1">Ajouter une nouvelle ressource</h1>
+                        <p class="text-muted mb-0">Complétez le formulaire pour ajouter une ressource à votre bibliothèque</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulaire d'ajout -->
+        <div class="card shadow-lg border-0">
+            <div class="card-body p-4">
+                <form id="ressourceForm">
+                    <div class="row g-3">
+                        <!-- Informations de base -->
+                        <div class="col-12">
+                            <h5 class="text-info mb-3">
+                                <i class="bi bi-info-circle me-2"></i>Informations de base
+                            </h5>
+                        </div>
+
+                        <!-- Titre -->
+                        <div class="col-md-6">
+                            <label for="titre" class="form-label fw-semibold">
+                                Titre <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="titre" name="titre" required 
+                                   minlength="1" maxlength="200" placeholder="Ex: Le Petit Prince">
+                            <div class="invalid-feedback">Le titre est obligatoire (1-200 caractères)</div>
+                        </div>
+
+                        <!-- Auteur -->
+                        <div class="col-md-6">
+                            <label for="auteur" class="form-label fw-semibold">
+                                Auteur <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="auteur" name="auteur" required 
+                                   minlength="2" maxlength="100" placeholder="Ex: Antoine de Saint-Exupéry">
+                            <div class="invalid-feedback">L'auteur est obligatoire (2-100 caractères)</div>
+                        </div>
+
+                        <!-- ISBN -->
+                        <div class="col-md-6">
+                            <label for="isbn" class="form-label fw-semibold">
+                                ISBN <small class="text-muted">(optionnel)</small>
+                            </label>
+                            <input type="text" class="form-control" id="isbn" name="isbn" 
+                                   placeholder="Ex: 978-3-16-148410-0">
+                            <small class="text-muted">Format: ISBN-10 ou ISBN-13</small>
+                            <div class="invalid-feedback">Format ISBN invalide</div>
+                        </div>
+
+                        <!-- Éditeur -->
+                        <div class="col-md-6">
+                            <label for="editeur" class="form-label fw-semibold">
+                                Éditeur <small class="text-muted">(optionnel)</small>
+                            </label>
+                            <input type="text" class="form-control" id="editeur" name="editeur" 
+                                   maxlength="100" placeholder="Ex: Gallimard">
+                            <div class="invalid-feedback">Maximum 100 caractères</div>
+                        </div>
+
+                        <!-- Catégorie -->
+                        <div class="col-md-6">
+                            <label for="categorie" class="form-label fw-semibold">
+                                Catégorie <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="categorie" name="categorie" required>
+                                <option value="">Sélectionnez une catégorie</option>
+                                <option value="LITTERATURE">Littérature</option>
+                                <option value="SCIENCES">Sciences</option>
+                                <option value="MULTIMEDIA">Multimédia</option>
+                                <option value="HISTOIRE">Histoire</option>
+                                <option value="TECHNOLOGIE">Technologie</option>
+                                <option value="ARTS">Arts</option>
+                                <option value="JEUNESSE">Jeunesse</option>
+                                <option value="PHILOSOPHIE">Philosophie</option>
+                                <option value="ECONOMIE">Économie</option>
+                                <option value="DROIT">Droit</option>
+                            </select>
+                            <div class="invalid-feedback">Veuillez sélectionner une catégorie</div>
+                        </div>
+
+                        <!-- Type de ressource -->
+                        <div class="col-md-6">
+                            <label for="typeRessource" class="form-label fw-semibold">
+                                Type de ressource <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="typeRessource" name="typeRessource" required>
+                                <option value="">Sélectionnez un type</option>
+                                <option value="LIVRE">Livre</option>
+                                <option value="DVD">DVD</option>
+                                <option value="CD">CD</option>
+                                <option value="REVUE">Revue</option>
+                                <option value="EBOOK">E-Book</option>
+                                <option value="AUDIOBOOK">Livre Audio</option>
+                            </select>
+                            <div class="invalid-feedback">Veuillez sélectionner un type</div>
+                        </div>
+
+                        <!-- Date de publication -->
+                        <div class="col-md-6">
+                            <label for="datePublication" class="form-label fw-semibold">
+                                Date de publication <small class="text-muted">(optionnel)</small>
+                            </label>
+                            <input type="date" class="form-control" id="datePublication" name="datePublication">
+                        </div>
+
+                        <!-- Description -->
+                        <div class="col-12">
+                            <label for="description" class="form-label fw-semibold">
+                                Description <small class="text-muted">(optionnel)</small>
+                            </label>
+                            <textarea class="form-control" id="description" name="description" 
+                                      rows="4" placeholder="Décrivez brièvement la ressource..."></textarea>
+                        </div>
+
+                        <!-- Gestion des exemplaires -->
+                        <div class="col-12 mt-4">
+                            <h5 class="text-info mb-3">
+                                <i class="bi bi-stack me-2"></i>Gestion des exemplaires
+                            </h5>
+                        </div>
+
+                        <!-- Nombre d'exemplaires -->
+                        <div class="col-md-6">
+                            <label for="nombreExemplaires" class="form-label fw-semibold">
+                                Nombre total d'exemplaires <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="nombreExemplaires" 
+                                   name="nombreExemplaires" required min="1" value="1">
+                            <div class="invalid-feedback">Minimum 1 exemplaire requis</div>
+                        </div>
+
+                        <!-- Exemplaires disponibles -->
+                        <div class="col-md-6">
+                            <label for="exemplairesDisponibles" class="form-label fw-semibold">
+                                Exemplaires disponibles <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="exemplairesDisponibles" 
+                                   name="exemplairesDisponibles" required min="0" value="1">
+                            <small class="text-muted">Doit être ≤ au nombre total</small>
+                            <div class="invalid-feedback">Ne peut pas être négatif</div>
+                        </div>
+
+                        <!-- Image de couverture -->
+                        <div class="col-12 mt-4">
+                            <h5 class="text-info mb-3">
+                                <i class="bi bi-image me-2"></i>Image de couverture
+                            </h5>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="imageCouverture" class="form-label fw-semibold">
+                                URL de l'image <small class="text-muted">(optionnel)</small>
+                            </label>
+                            <input type="url" class="form-control" id="imageCouverture" 
+                                   name="imageCouverture" placeholder="https://exemple.com/image.jpg">
+                            <small class="text-muted">Entrez l'URL d'une image de couverture</small>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="col-12 mt-4">
+                            <hr>
+                            <div class="d-flex gap-2 justify-content-end">
+                                <a th:href="@{/bibliothecaire/dashboard}" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle me-2"></i>Annuler
+                                </a>
+                                <button type="submit" class="btn btn-info" id="submitBtn">
+                                    <i class="bi bi-check-circle me-2"></i>Ajouter la ressource
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('ressourceForm');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // Validation en temps réel du nombre d'exemplaires
+            const nombreExemplaires = document.getElementById('nombreExemplaires');
+            const exemplairesDisponibles = document.getElementById('exemplairesDisponibles');
+            
+            nombreExemplaires.addEventListener('input', function() {
+                exemplairesDisponibles.max = this.value;
+                if (parseInt(exemplairesDisponibles.value) > parseInt(this.value)) {
+                    exemplairesDisponibles.value = this.value;
+                }
+            });
+            
+            exemplairesDisponibles.addEventListener('input', function() {
+                if (parseInt(this.value) > parseInt(nombreExemplaires.value)) {
+                    this.setCustomValidity('Ne peut pas dépasser le nombre total');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+
+            // Soumission du formulaire
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                if (!form.checkValidity()) {
+                    e.stopPropagation();
+                    form.classList.add('was-validated');
+                    return;
+                }
+                
+                // Désactiver le bouton de soumission
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Ajout en cours...';
+                
+                // Récupérer les données du formulaire
+                const formData = {
+                    titre: document.getElementById('titre').value.trim(),
+                    auteur: document.getElementById('auteur').value.trim(),
+                    isbn: document.getElementById('isbn').value.trim() || null,
+                    categorie: document.getElementById('categorie').value,
+                    typeRessource: document.getElementById('typeRessource').value,
+                    description: document.getElementById('description').value.trim() || null,
+                    editeur: document.getElementById('editeur').value.trim() || null,
+                    datePublication: document.getElementById('datePublication').value || null,
+                    nombreExemplaires: parseInt(document.getElementById('nombreExemplaires').value),
+                    exemplairesDisponibles: parseInt(document.getElementById('exemplairesDisponibles').value),
+                    imageCouverture: document.getElementById('imageCouverture').value.trim() || null
+                };
+                
+                try {
+                    const response = await fetch('/api/ressources', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        // Afficher un message de succès
+                        showToast('Succès', 'La ressource a été ajoutée avec succès!', 'success');
+                        
+                        // Rediriger vers la liste des ressources après 1 seconde
+                        setTimeout(() => {
+                            window.location.href = '/ressources/list';
+                        }, 1000);
+                    } else {
+                        // Afficher le message d'erreur
+                        showToast('Erreur', result.message || 'Une erreur est survenue', 'danger');
+                        
+                        // Réactiver le bouton
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Ajouter la ressource';
+                    }
+                } catch (error) {
+                    console.error('Erreur:', error);
+                    showToast('Erreur', 'Impossible de communiquer avec le serveur', 'danger');
+                    
+                    // Réactiver le bouton
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Ajouter la ressource';
+                }
+            });
+            
+            // Fonction pour afficher un toast
+            function showToast(title, message, type) {
+                const toastContainer = document.querySelector('.toast-container') || createToastContainer();
+                
+                const toastHtml = `
+                    <div class="toast align-items-center text-bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <strong>${title}</strong><br>${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>
+                `;
+                
+                toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                const toastElement = toastContainer.lastElementChild;
+                const toast = new bootstrap.Toast(toastElement);
+                toast.show();
+                
+                // Supprimer le toast après qu'il soit caché
+                toastElement.addEventListener('hidden.bs.toast', () => {
+                    toastElement.remove();
+                });
+            }
+            
+            function createToastContainer() {
+                const container = document.createElement('div');
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = '11';
+                document.body.appendChild(container);
+                return container;
+            }
+        });
+    </script>
+</body>
+</html>

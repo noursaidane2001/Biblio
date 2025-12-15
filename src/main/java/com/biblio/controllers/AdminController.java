@@ -1,10 +1,13 @@
 package com.biblio.controllers;
 
 import com.biblio.dao.UserDAO;
+import com.biblio.dto.CreateBibliothequeRequest;
 import com.biblio.dto.CreateUserRequest;
+import com.biblio.entities.Bibliotheque;
 import com.biblio.entities.User;
 import com.biblio.enums.Role;
 import com.biblio.services.AdminService;
+import com.biblio.services.BibliothequeService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,13 +23,15 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('SUPER_ADMIN')")
 public class AdminController {
     private final AdminService adminService;
+    private final BibliothequeService bibliothequeService;
     private final UserDAO userDAO;
 
-    public AdminController(AdminService adminService, UserDAO userDAO) {
+    public AdminController(AdminService adminService, BibliothequeService bibliothequeService, UserDAO userDAO) {
         this.adminService = adminService;
+        this.bibliothequeService = bibliothequeService;
         this.userDAO = userDAO;
     }
 
@@ -85,12 +90,12 @@ public class AdminController {
             @Valid @RequestBody CreateUserRequest request,
             @AuthenticationPrincipal UserDetails currentUser) {
         try {
-            // Vérifier que le rôle est ADMIN ou BIBLIOTHECAIRE (pas USAGER)
-            if (request.role() == Role.USAGER) {
+            // Vérifier que le rôle est ADMIN ou BIBLIOTHECAIRE (pas USAGER ni SUPER_ADMIN)
+            if (request.role() == Role.USAGER || request.role() == Role.SUPER_ADMIN) {
                 Map<String, Object> error = new HashMap<>();
                 error.put("success", false);
                 error.put("error", "Invalid role");
-                error.put("message", "Les administrateurs ne peuvent créer que des comptes ADMIN ou BIBLIOTHECAIRE");
+                error.put("message", "Les super administrateurs ne peuvent créer que des comptes ADMIN ou BIBLIOTHECAIRE");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
             }
 
@@ -100,6 +105,7 @@ public class AdminController {
                     request.email(),
                     request.password(),
                     request.role(),
+                    request.bibliothequeId(),
                     request.emailVerifie(),
                     request.actif()
             );
@@ -232,6 +238,120 @@ public class AdminController {
         }
     }
 
+    /**
+     * GET /api/admin/bibliotheques
+     * Liste toutes les bibliothèques
+     */
+    @GetMapping("/bibliotheques")
+    public ResponseEntity<Map<String, Object>> getAllBibliotheques() {
+        try {
+            List<Map<String, Object>> bibliotheques = bibliothequeService.getAll().stream()
+                    .map(this::bibliothequeToMap)
+                    .collect(Collectors.toList());
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("bibliotheques", bibliotheques);
+            result.put("total", bibliotheques.size());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to fetch bibliotheques");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * GET /api/admin/bibliotheques/actives
+     * Liste toutes les bibliothèques actives
+     */
+    @GetMapping("/bibliotheques/actives")
+    public ResponseEntity<Map<String, Object>> getActiveBibliotheques() {
+        try {
+            List<Map<String, Object>> bibliotheques = bibliothequeService.getAllActives().stream()
+                    .map(this::bibliothequeToMap)
+                    .collect(Collectors.toList());
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("bibliotheques", bibliotheques);
+            result.put("total", bibliotheques.size());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to fetch bibliotheques");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * POST /api/admin/bibliotheques
+     * Crée une nouvelle bibliothèque
+     */
+    @PostMapping("/bibliotheques")
+    public ResponseEntity<Map<String, Object>> createBibliotheque(
+            @Valid @RequestBody CreateBibliothequeRequest request) {
+        try {
+            Bibliotheque bibliotheque = bibliothequeService.createBibliotheque(
+                    request.nom(),
+                    request.adresse(),
+                    request.ville(),
+                    request.telephone(),
+                    request.capaciteStock()
+            );
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "Bibliothèque créée avec succès");
+            result.put("bibliotheque", bibliothequeToMap(bibliotheque));
+            return ResponseEntity.status(HttpStatus.CREATED).body(result);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to create bibliotheque");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to create bibliotheque");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * DELETE /api/admin/bibliotheques/{id}
+     * Supprime une bibliothèque
+     */
+    @DeleteMapping("/bibliotheques/{id}")
+    public ResponseEntity<Map<String, Object>> deleteBibliotheque(@PathVariable Long id) {
+        try {
+            bibliothequeService.deleteBibliotheque(id);
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "Bibliothèque supprimée avec succès");
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Bibliotheque not found");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to delete bibliotheque");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
     private Map<String, Object> userToMap(User user) {
         Map<String, Object> userMap = new HashMap<>();
         userMap.put("id", user.getId());
@@ -250,5 +370,17 @@ public class AdminController {
             ));
         }
         return userMap;
+    }
+
+    private Map<String, Object> bibliothequeToMap(Bibliotheque bibliotheque) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", bibliotheque.getId());
+        map.put("nom", bibliotheque.getNom());
+        map.put("adresse", bibliotheque.getAdresse());
+        map.put("ville", bibliotheque.getVille());
+        map.put("telephone", bibliotheque.getTelephone());
+        map.put("capaciteStock", bibliotheque.getCapaciteStock());
+        map.put("actif", bibliotheque.getActif());
+        return map;
     }
 }

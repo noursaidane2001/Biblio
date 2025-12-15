@@ -23,7 +23,8 @@ public class DashboardController {
      */
     public static String getDashboardUrlForRole(Role role) {
         return switch (role) {
-            case ADMIN -> "/admin/dashboard";
+            case SUPER_ADMIN -> "/super-admin/dashboard";
+            case ADMIN -> "/bibliotheque-admin/dashboard";
             case BIBLIOTHECAIRE -> "/bibliothecaire/dashboard";
             case USAGER -> "/usager/dashboard";
         };
@@ -120,10 +121,10 @@ public class DashboardController {
     }
 
     /**
-     * Dashboard pour les administrateurs
+     * Dashboard pour les super administrateurs
      */
-    @GetMapping("/admin/dashboard")
-    public String adminDashboard(
+    @GetMapping("/super-admin/dashboard")
+    public String superAdminDashboard(
             @AuthenticationPrincipal UserDetails userDetails,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String success,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String error,
@@ -139,8 +140,8 @@ public class DashboardController {
                     .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
         }
 
-        // Vérifier que l'utilisateur est bien un administrateur
-        if (!user.isAdmin()) {
+        // Vérifier que l'utilisateur est bien un super administrateur
+        if (!user.isSuperAdmin()) {
             return "redirect:" + getDashboardUrlForRole(user.getRole());
         }
 
@@ -148,6 +149,59 @@ public class DashboardController {
         addMessagesToModel(model, request, success, error);
         
         return "dashboard-admin";
+    }
+
+    /**
+     * Route de compatibilité pour /admin/dashboard - redirige vers le bon dashboard selon le rôle
+     */
+    @GetMapping("/admin/dashboard")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public String adminDashboardCompatibility(
+            @AuthenticationPrincipal UserDetails userDetails,
+            Model model) {
+        if (userDetails == null) {
+            return "redirect:/login";
+        }
+
+        User user = (User) model.getAttribute("currentUser");
+        if (user == null) {
+            user = userDAO.findByEmail(userDetails.getUsername())
+                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        }
+
+        // Rediriger vers le dashboard approprié selon le rôle
+        return "redirect:" + getDashboardUrlForRole(user.getRole());
+    }
+
+    /**
+     * Dashboard pour les administrateurs de bibliothèque
+     */
+    @GetMapping("/bibliotheque-admin/dashboard")
+    public String bibliothequeAdminDashboard(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String success,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String error,
+            Model model,
+            jakarta.servlet.http.HttpServletRequest request) {
+        if (userDetails == null) {
+            return "redirect:/login";
+        }
+
+        User user = (User) model.getAttribute("currentUser");
+        if (user == null) {
+            user = userDAO.findByEmail(userDetails.getUsername())
+                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        }
+
+        // Vérifier que l'utilisateur est bien un administrateur de bibliothèque
+        if (!user.isAdmin()) {
+            return "redirect:" + getDashboardUrlForRole(user.getRole());
+        }
+
+        model.addAttribute("user", user);
+        addMessagesToModel(model, request, success, error);
+        
+        return "dashboard-bibliotheque-admin";
     }
 
     /**
