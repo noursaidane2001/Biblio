@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ReservationDAO extends JpaRepository<Reservation, Long> {
@@ -27,4 +28,9 @@ public interface ReservationDAO extends JpaRepository<Reservation, Long> {
     @Modifying
     @Query("UPDATE Reservation r SET r.statut = :statut WHERE r.id = :id")
     void updateStatut(@Param("id") Long id, @Param("statut") StatutReservation statut);
+
+    @Query("SELECT r FROM Reservation r WHERE r.usager.id = :usagerId AND r.ressource.id = :ressourceId AND r.statut IN (:statuts)")
+    List<Reservation> findByUsagerAndRessourceAndStatutIn(@Param("usagerId") Long usagerId,
+                                                          @Param("ressourceId") Long ressourceId,
+                                                          @Param("statuts") List<StatutReservation> statuts);
 }
