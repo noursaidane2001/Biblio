@@ -89,8 +89,8 @@
 	                        </div>
 	                        <h5 class="card-title">Notifications</h5>
 	                        <p class="card-text text-muted">Consultez les notifications et alertes</p>
-	                        <button class="btn btn-warning" disabled>
-	                            <i class="bi bi-arrow-right me-2"></i>Bientôt disponible
+	                        <button class="btn btn-warning" id="openReservationsModal" data-bs-toggle="modal" data-bs-target="#reservationsModal">
+	                            <i class="bi bi-bell me-2"></i>Voir les réservations en attente
 	                        </button>
 	                    </div>
 	                </div>
@@ -204,6 +204,8 @@
 	
 	    <!-- Bootstrap 5 JS Bundle -->
 	    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+	    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+	    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 	    
 	    <style>
 	        @keyframes pulse {
@@ -227,8 +229,145 @@
 	    </style>
 	    
 	    <script th:inline="javascript">
+	        const BIB_ID = [[${user.bibliotheque != null ? user.bibliotheque.id : null}]];
+	        
+	        async function loadReservationsEnAttente() {
+	            try {
+	                const resp = await fetch('/api/bibliothecaire/reservations/en-attente', {
+	                    headers: { 'Accept': 'application/json' }
+	                });
+	                const data = await resp.json();
+	                const list = document.getElementById('reservationsList');
+	                const countBadge = document.getElementById('notifCount');
+	                const total = data && data.total ? data.total : 0;
+	                if (countBadge) {
+	                    if (total > 0) {
+	                        countBadge.style.display = 'inline';
+	                        countBadge.textContent = '' + total;
+	                    } else {
+	                        countBadge.style.display = 'none';
+	                    }
+	                }
+	                if (!list) return;
+	                if (data.success && Array.isArray(data.reservations) && data.reservations.length > 0) {
+	                    list.innerHTML = data.reservations.map(item => {
+	                        const titre = (item.ressource && item.ressource.titre) ? item.ressource.titre : 'Ressource';
+	                        const auteur = (item.ressource && item.ressource.auteur) ? item.ressource.auteur : '';
+	                        const usagerNom = (item.usager && item.usager.nom) ? item.usager.nom : '';
+	                        const usagerPrenom = (item.usager && item.usager.prenom) ? item.usager.prenom : '';
+	                        const dateDemande = item.dateDemande || '';
+	                        return `
+	                            <li class="list-group-item">
+	                                <div class="d-flex justify-content-between align-items-start">
+	                                    <div class="ms-2 me-auto">
+	                                        <div class="fw-semibold">${titre}${auteur ? ' — ' + auteur : ''}</div>
+	                                        <small class="text-muted">Usager: ${usagerPrenom} ${usagerNom} · Demande: ${dateDemande}</small>
+	                                    </div>
+	                                    <span class="badge bg-warning text-dark">En attente</span>
+	                                </div>
+	                                <div class="mt-2 d-flex gap-2 justify-content-end">
+	                                    <button class="btn btn-sm btn-success" onclick="confirmReservation(${item.id})">
+	                                        <i class="bi bi-check2 me-1"></i>Confirmer
+	                                    </button>
+	                                    <button class="btn btn-sm btn-outline-danger" onclick="rejectReservation(${item.id})">
+	                                        <i class="bi bi-x me-1"></i>Rejeter
+	                                    </button>
+	                                </div>
+	                            </li>
+	                        `;
+	                    }).join('');
+	                } else {
+	                    list.innerHTML = '<li class="list-group-item text-muted">Aucune réservation en attente</li>';
+	                }
+	            } catch (e) {
+	                const list = document.getElementById('reservationsList');
+	                if (list) list.innerHTML = '<li class="list-group-item text-danger">Erreur de chargement des réservations</li>';
+	            }
+	        }
+	        
+	        function connectReservationsWS() {
+	            if (!BIB_ID) return;
+	            const socket = new SockJS('/ws');
+	            const client = Stomp.over(socket);
+	            client.debug = null;
+	            client.connect({}, function() {
+	                client.subscribe('/topic/reservations/en-attente/' + BIB_ID, function(message) {
+	                    const count = parseInt(message.body, 10);
+	                    const badge = document.getElementById('notifCount');
+	                    if (badge) {
+	                        if (isNaN(count) || count <= 0) {
+	                            badge.style.display = 'none';
+	                        } else {
+	                            badge.style.display = 'inline';
+	                            badge.textContent = '' + count;
+	                        }
+	                    }
+	                    loadReservationsEnAttente();
+	                });
+	            });
+	        }
+	        
+	        async function confirmReservation(id) {
+	            try {
+	                const commentaire = window.prompt('Commentaire (optionnel) :', '');
+	                const resp = await fetch('/api/bibliothecaire/reservations/' + id + '/confirm', {
+	                    method: 'PUT',
+	                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+	                    body: JSON.stringify({ commentaire })
+	                });
+	                const data = await resp.json();
+	                if (data.success) {
+	                    loadReservationsEnAttente();
+	                } else {
+	                    alert('Erreur de confirmation: ' + (data.message || ''));
+	                }
+	            } catch (e) {
+	                alert('Erreur de confirmation: ' + e.message);
+	            }
+	        }
+	        
+	        async function rejectReservation(id) {
+	            try {
+	                const raison = window.prompt('Raison du rejet :', '');
+	                const resp = await fetch('/api/bibliothecaire/reservations/' + id + '/reject', {
+	                    method: 'PUT',
+	                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+	                    body: JSON.stringify({ raison })
+	                });
+	                const data = await resp.json();
+	                if (data.success) {
+	                    loadReservationsEnAttente();
+	                } else {
+	                    alert('Erreur de rejet: ' + (data.message || ''));
+	                }
+	            } catch (e) {
+	                alert('Erreur de rejet: ' + e.message);
+	            }
+	        }
+	        
 	        // Initialiser les toasts Bootstrap
 	        document.addEventListener('DOMContentLoaded', function() {
+	            const notifLink = document.getElementById('notificationsLink');
+	            if (notifLink) {
+	                notifLink.addEventListener('click', function(e) {
+	                    e.preventDefault();
+	                    const modalEl = document.getElementById('reservationsModal');
+	                    if (modalEl) {
+	                        const modal = new bootstrap.Modal(modalEl);
+	                        modal.show();
+	                        loadReservationsEnAttente();
+	                    }
+	                });
+	            }
+	            const openBtn = document.getElementById('openReservationsModal');
+	            if (openBtn) {
+	                openBtn.addEventListener('click', function() {
+	                    loadReservationsEnAttente();
+	                });
+	            }
+	            loadReservationsEnAttente();
+	            connectReservationsWS();
+	            
 	            const toastElements = document.querySelectorAll('.toast');
 	            if (toastElements.length > 0) {
 	                toastElements.forEach(function(toastEl) {
@@ -239,11 +378,32 @@
 	                        });
 	                        toast.show();
 	                    } else {
-                        toastEl.classList.add('show');
-                    }
-                });
-            }
-        });
-    </script>
-</body>
-</html>
+	                        toastEl.classList.add('show');
+	                    }
+	                });
+	            }
+	        });
+	    </script>
+	    
+	    <div class="modal fade" id="reservationsModal" tabindex="-1" aria-labelledby="reservationsModalLabel" aria-hidden="true">
+	        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+	            <div class="modal-content">
+	                <div class="modal-header">
+	                    <h5 class="modal-title" id="reservationsModalLabel">
+	                        <i class="bi bi-bell me-2"></i>Réservations en attente
+	                    </h5>
+	                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+	                </div>
+	                <div class="modal-body p-0">
+	                    <ul class="list-group list-group-flush" id="reservationsList">
+	                        <li class="list-group-item text-muted">Chargement...</li>
+	                    </ul>
+	                </div>
+	                <div class="modal-footer">
+	                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+	                </div>
+	            </div>
+	        </div>
+	    </div>
+	</body>
+	</html>
