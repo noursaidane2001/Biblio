@@ -142,6 +142,7 @@
                     </div>
                     <div class="card-body">
                         <div id="reservationsEmpty" class="text-muted">Aucune réservation.</div>
+                        <div id="reservationsList" class="list-group list-group-flush"></div>
                     </div>
                 </div>
             </div>
@@ -155,14 +156,14 @@
             </div>
             <div class="card-body">
                 <div class="row g-3 align-items-end mb-4">
-                    <div class="col-md-6">
-                        <label for="catalogSearch" class="form-label fw-semibold text-muted">Rechercher par titre ou auteur</label>
+                    <div class="col-lg-4">
+                        <label for="catalogSearch" class="form-label fw-semibold text-muted">Rechercher par titre, auteur ou ISBN</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white text-muted"><i class="bi bi-search"></i></span>
                             <input type="text" class="form-control" id="catalogSearch" placeholder="Ex: Hugo, programmation, poésie...">
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-lg-3">
                         <label for="catalogCategorie" class="form-label fw-semibold text-muted">Catégorie</label>
                         <select class="form-select" id="catalogCategorie">
                             <option value="">Toutes les catégories</option>
@@ -174,8 +175,31 @@
                             <option value="TECHNOLOGIE">Technologie</option>
                         </select>
                     </div>
-                    <div class="col-md-2 text-md-end">
-                        <button class="btn btn-outline-secondary w-100" id="catalogReset">
+                    <div class="col-lg-3">
+                        <label for="catalogType" class="form-label fw-semibold text-muted">Type</label>
+                        <select class="form-select" id="catalogType">
+                            <option value="">Tous les types</option>
+                            <option value="LIVRE">Livre</option>
+                            <option value="MAGAZINE">Magazine</option>
+                            <option value="DVD">DVD</option>
+                            <option value="CD">CD</option>
+                            <option value="NUMERIQUE">Numérique</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2 text-lg-end">
+                        <label for="catalogStatut" class="form-label fw-semibold text-muted">Statut</label>
+                        <select class="form-select" id="catalogStatut">
+                            <option value="">Tous</option>
+                            <option value="DISPONIBLE">Disponibles</option>
+                            <option value="INDISPONIBLE">Indisponibles</option>
+                            <option value="EN_ATTENTE">Mes réservations en attente</option>
+                            <option value="CONFIRMEE">Mes réservations confirmées</option>
+                            <option value="ANNULEE">Mes réservations annulées</option>
+                            <option value="EXPIREE">Mes réservations expirées</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-lg-12 text-lg-end">
+                        <button class="btn btn-outline-secondary" id="catalogReset">
                             <i class="bi bi-arrow-counterclockwise me-1"></i>Réinitialiser
                         </button>
                     </div>
@@ -245,12 +269,21 @@
             HISTOIRE: 'Histoire',
             TECHNOLOGIE: 'Technologie'
         };
+        const CATALOG_TYPE_LABELS = {
+            LIVRE: 'Livre',
+            MAGAZINE: 'Magazine',
+            DVD: 'DVD',
+            CD: 'CD',
+            NUMERIQUE: 'Numérique'
+        };
 
         let catalogData = [];
         let filteredCatalogData = [];
+        let reservationsParRessource = {};
 
         document.addEventListener('DOMContentLoaded', async function() {
             await chargerCatalogue();
+            await chargerReservationsUtilisateur();
             initialiserFiltresCatalogue();
         });
 
@@ -284,15 +317,40 @@
             }
         }
 
+        async function chargerReservationsUtilisateur() {
+            try {
+                const resp = await fetch('/api/reservations/mes');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const list = Array.isArray(data.reservations) ? data.reservations : (data.ressources || []);
+                reservationsParRessource = {};
+                list.forEach(r => {
+                    if (r.ressource && r.ressource.id) {
+                        reservationsParRessource[r.ressource.id] = r.statut || 'EN_ATTENTE';
+                    }
+                });
+                renderCatalogue();
+                renderReservationsListe(list);
+            } catch (e) {
+                console.warn('Impossible de charger les réservations usager', e);
+            }
+        }
+
         function initialiserFiltresCatalogue() {
             const search = document.getElementById('catalogSearch');
             const categorie = document.getElementById('catalogCategorie');
+            const type = document.getElementById('catalogType');
+            const statut = document.getElementById('catalogStatut');
             const reset = document.getElementById('catalogReset');
             if (search) search.addEventListener('input', appliquerFiltresCatalogue);
             if (categorie) categorie.addEventListener('change', appliquerFiltresCatalogue);
+            if (type) type.addEventListener('change', appliquerFiltresCatalogue);
+            if (statut) statut.addEventListener('change', appliquerFiltresCatalogue);
             if (reset) reset.addEventListener('click', () => {
                 search.value = '';
                 categorie.value = '';
+                if (type) type.value = '';
+                if (statut) statut.value = '';
                 appliquerFiltresCatalogue();
             });
         }
@@ -309,14 +367,26 @@
         function appliquerFiltresCatalogue() {
             const terme = normaliserTexte(document.getElementById('catalogSearch')?.value || '');
             const categorie = document.getElementById('catalogCategorie')?.value || '';
+            const type = document.getElementById('catalogType')?.value || '';
+            const statut = document.getElementById('catalogStatut')?.value || '';
             filteredCatalogData = catalogData.filter(item => {
                 const titre = normaliserTexte(item.titre);
                 const auteur = normaliserTexte(item.auteur);
                 const catCode = item.categorie || '';
                 const catLabel = normaliserTexte(CATALOG_CATEGORY_LABELS[catCode] || '');
+                const typeCode = item.typeRessource || '';
+                const typeLabel = normaliserTexte(CATALOG_TYPE_LABELS[typeCode] || '');
+                const disponibles = item.exemplairesDisponibles ?? 0;
+                const reservationStatut = reservationsParRessource[item.id];
+
                 const catOk = !categorie || catCode === categorie;
-                const texteOk = !terme || titre.includes(terme) || auteur.includes(terme) || catLabel.includes(terme);
-                return catOk && texteOk;
+                const typeOk = !type || typeCode === type;
+                const dispoOk = !statut ||
+                    (statut === 'DISPONIBLE' && disponibles > 0) ||
+                    (statut === 'INDISPONIBLE' && disponibles <= 0) ||
+                    (['EN_ATTENTE','CONFIRMEE','ANNULEE','EXPIREE'].includes(statut) && reservationStatut === statut);
+                const texteOk = !terme || titre.includes(terme) || auteur.includes(terme) || catLabel.includes(terme) || typeLabel.includes(terme);
+                return catOk && typeOk && dispoOk && texteOk;
             });
             renderCatalogue();
         }
@@ -337,12 +407,58 @@
             countBadge.textContent = filteredCatalogData.length + (filteredCatalogData.length > 1 ? ' résultats' : ' résultat');
 
             grid.innerHTML = filteredCatalogData.map(createCatalogueCard).join('');
+
+            grid.querySelectorAll('.btn-reserver').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const ressourceId = e.currentTarget.getAttribute('data-ressource-id');
+                    await reserverRessource(ressourceId);
+                });
+            });
+        }
+
+        async function reserverRessource(ressourceId) {
+            try {
+                const resp = await fetch('/api/reservations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ressourceId })
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.success) {
+                    alert(data.error || 'Réservation impossible');
+                    return;
+                }
+                await chargerReservationsUtilisateur();
+                appliquerFiltresCatalogue();
+                alert('Réservation enregistrée. En attente de confirmation.');
+            } catch (e) {
+                console.error('Erreur réservation', e);
+                alert('Erreur lors de la réservation.');
+            }
+        }
+
+        async function annulerReservation(id) {
+            try {
+                const resp = await fetch(`/api/reservations/${id}/annuler`, { method: 'POST' });
+                if (!resp.ok) throw new Error('Annulation impossible');
+                await chargerReservationsUtilisateur();
+                appliquerFiltresCatalogue();
+            } catch (e) {
+                alert('Annulation impossible');
+            }
         }
 
         function createCatalogueCard(ressource) {
             const categorie = CATALOG_CATEGORY_LABELS[ressource.categorie] || 'Divers';
+            const typeLabel = CATALOG_TYPE_LABELS[ressource.typeRessource] || '';
             const cover = ressource.imageCouverture || 'https://illustrations.popsy.co/gray/bookshelf.svg';
             const disponibles = ressource.exemplairesDisponibles ?? 0;
+            const statutReservation = reservationsParRessource[ressource.id];
+            const disabled = disponibles === 0 && !statutReservation;
+            let badgeReservation = '';
+            if (statutReservation) {
+                badgeReservation = `<span class="badge bg-info-subtle text-info">${statutReservation.replaceAll('_', ' ')}</span>`;
+            }
 
             return `
                 <div class="col-md-6 col-xl-4">
@@ -351,7 +467,11 @@
                             <img src="${cover}" alt="${ressource.titre || 'Ressource'}" class="w-100 h-100" style="object-fit: cover;">
                         </div>
                         <div class="card-body">
-                            <span class="badge bg-primary-subtle text-primary mb-2">${categorie}</span>
+                            <div class="d-flex gap-2 mb-2 flex-wrap">
+                                <span class="badge bg-primary-subtle text-primary">${categorie}</span>
+                                ${typeLabel ? `<span class="badge bg-secondary-subtle text-secondary">${typeLabel}</span>` : ''}
+                                ${badgeReservation}
+                            </div>
                             <h5 class="fw-bold mb-1">${ressource.titre || 'Titre non renseigné'}</h5>
                             <p class="text-muted small mb-2"><i class="bi bi-pen me-1"></i>${ressource.auteur || 'Auteur inconnu'}</p>
                             <p class="text-muted small mb-3">${tronquer(ressource.description || 'Aucune description disponible.', 120)}</p>
@@ -359,14 +479,44 @@
                                 <span class="badge ${disponibles > 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">
                                     ${disponibles > 0 ? `${disponibles} disponibles` : 'Indisponible'}
                                 </span>
-                                <button class="btn btn-sm btn-outline-primary" ${disponibles === 0 ? 'disabled' : ''}>
-                                    <i class="bi bi-bookmark-plus me-1"></i>Réserver
+                                <button class="btn btn-sm btn-outline-primary btn-reserver" data-ressource-id="${ressource.id}" ${disabled ? 'disabled' : ''}>
+                                    <i class="bi bi-bookmark-plus me-1"></i>${statutReservation ? 'Réservé' : 'Réserver'}
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
             `;
+        }
+
+        function renderReservationsListe(list) {
+            const empty = document.getElementById('reservationsEmpty');
+            const container = document.getElementById('reservationsList');
+            if (!container) return;
+            if (!list || list.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('d-none');
+                return;
+            }
+            empty.classList.add('d-none');
+            container.innerHTML = list.map(r => {
+                const statut = r.statut || 'EN_ATTENTE';
+                const badge = `<span class="badge bg-secondary-subtle text-secondary me-2">${statut.replaceAll('_',' ')}</span>`;
+                const titre = r.ressource?.titre || 'Ressource';
+                const auteur = r.ressource?.auteur || '';
+                return `
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            ${badge}
+                            <div class="fw-semibold">${titre}</div>
+                            <div class="text-muted small">${auteur}</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            ${statut === 'EN_ATTENTE' ? `<button class="btn btn-sm btn-outline-danger" onclick="annulerReservation(${r.id})"><i class="bi bi-x-circle me-1"></i>Annuler</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function tronquer(text, max) {

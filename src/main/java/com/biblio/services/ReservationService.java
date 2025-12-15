@@ -1,0 +1,259 @@
+package com.biblio.services;
+
+import com.biblio.dao.ReservationDAO;
+import com.biblio.dao.RessourceDAO;
+import com.biblio.dao.UserDAO;
+import com.biblio.entities.Bibliotheque;
+import com.biblio.entities.Reservation;
+import com.biblio.entities.Ressource;
+import com.biblio.entities.User;
+import com.biblio.enums.StatutReservation;
+import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+public class ReservationService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ReservationService.class);
+    private static final int DEFAULT_RETRAIT_HEURES = 72;
+
+    private final ReservationDAO reservationDAO;
+    private final RessourceDAO ressourceDAO;
+    private final UserDAO userDAO;
+    private final EmailService emailService;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+
+    public ReservationService(ReservationDAO reservationDAO, RessourceDAO ressourceDAO, UserDAO userDAO, EmailService emailService,
+                              org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate) {
+        this.reservationDAO = reservationDAO;
+        this.ressourceDAO = ressourceDAO;
+        this.userDAO = userDAO;
+        this.emailService = emailService;
+        this.messagingTemplate = messagingTemplate;
+    }
+
+    @Transactional
+    public Reservation creerReservation(Long ressourceId, String usagerEmail) {
+        User usager = userDAO.findByEmail(usagerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Usager introuvable"));
+        Ressource ressource = ressourceDAO.findById(ressourceId)
+                .orElseThrow(() -> new IllegalArgumentException("Ressource introuvable"));
+        Bibliotheque bibliotheque = ressource.getBibliotheque();
+        if (bibliotheque == null) {
+            throw new IllegalStateException("La ressource n'est associée à aucune bibliothèque");
+        }
+
+        Reservation reservation = Reservation.builder()
+                .ressource(ressource)
+                .usager(usager)
+                .bibliotheque(bibliotheque)
+                .statut(StatutReservation.EN_ATTENTE)
+                .dateDemande(LocalDateTime.now())
+                .build();
+
+        Reservation saved = reservationDAO.save(reservation);
+
+        notifierCreation(usager, saved);
+        notifierBibliothecaireNouvelle(bibliotheque, saved);
+        pushReservationsEnAttente(bibliotheque.getId());
+
+        logger.info("Réservation créée pour ressource {} par usager {}", ressourceId, usagerEmail);
+        return saved;
+    }
+
+    public List<Reservation> listerReservationsUsager(String usagerEmail) {
+        User usager = userDAO.findByEmail(usagerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Usager introuvable"));
+        return reservationDAO.findByUsagerId(usager.getId());
+    }
+
+    public List<Reservation> listerEnAttentePourBibliotheque(String emailBibliothecaire) {
+        User bibliothecaire = chargerBibliothecaire(emailBibliothecaire);
+        Bibliotheque biblio = bibliothecaire.getBibliotheque();
+        if (biblio == null) {
+            throw new IllegalStateException("Bibliothécaire sans bibliothèque associée");
+        }
+        return reservationDAO.findByBibliothequeAndStatut(biblio.getId(), StatutReservation.EN_ATTENTE);
+    }
+
+    @Transactional
+    public Reservation confirmerReservation(Long reservationId, String emailBibliothecaire, String commentaire) {
+        Reservation reservation = chargerReservation(reservationId);
+        User bibliothecaire = chargerBibliothecaire(emailBibliothecaire);
+        validerMemeBibliotheque(reservation, bibliothecaire);
+
+        if (reservation.getStatut() != StatutReservation.EN_ATTENTE) {
+            throw new IllegalStateException("Réservation non en attente");
+        }
+
+        Ressource ressource = reservation.getRessource();
+        if (ressource.getExemplairesDisponibles() == null || ressource.getExemplairesDisponibles() <= 0) {
+            throw new IllegalStateException("Aucun exemplaire disponible pour confirmer la réservation");
+        }
+
+        ressource.setExemplairesDisponibles(ressource.getExemplairesDisponibles() - 1);
+        reservation.setStatut(StatutReservation.CONFIRMEE);
+        reservation.setDateConfirmation(LocalDateTime.now());
+        reservation.setDeadlineRetrait(LocalDateTime.now().plusHours(DEFAULT_RETRAIT_HEURES));
+        reservation.setDateExpiration(reservation.getDeadlineRetrait());
+        reservation.setExemplaireVerrouille(true);
+        reservation.setCommentaire(commentaire);
+
+        reservationDAO.save(reservation);
+        ressourceDAO.save(ressource);
+
+        notifierConfirmation(reservation);
+        pushReservationsEnAttente(bibliothecaire.getBibliotheque().getId());
+        return reservation;
+    }
+
+    @Transactional
+    public Reservation rejeterReservation(Long reservationId, String emailBibliothecaire, String raison) {
+        Reservation reservation = chargerReservation(reservationId);
+        User bibliothecaire = chargerBibliothecaire(emailBibliothecaire);
+        validerMemeBibliotheque(reservation, bibliothecaire);
+
+        reservation.setStatut(StatutReservation.ANNULEE);
+        reservation.setCommentaire(raison);
+        reservationDAO.save(reservation);
+        notifierRejet(reservation);
+        pushReservationsEnAttente(reservation.getBibliotheque().getId());
+        return reservation;
+    }
+
+    @Transactional
+    public Reservation marquerEmprunte(Long reservationId, String emailBibliothecaire) {
+        Reservation reservation = chargerReservation(reservationId);
+        User bibliothecaire = chargerBibliothecaire(emailBibliothecaire);
+        validerMemeBibliotheque(reservation, bibliothecaire);
+
+        if (reservation.getStatut() != StatutReservation.CONFIRMEE) {
+            throw new IllegalStateException("Seules les réservations confirmées peuvent être marquées empruntées");
+        }
+        reservation.setStatut(StatutReservation.EMPRUNT_EN_COURS);
+        pushReservationsEnAttente(reservation.getBibliotheque().getId());
+        return reservationDAO.save(reservation);
+    }
+
+    @Transactional
+    public Reservation annulerParUsager(Long reservationId, String emailUsager) {
+        Reservation reservation = chargerReservation(reservationId);
+        if (!reservation.getUsager().getEmail().equalsIgnoreCase(emailUsager)) {
+            throw new IllegalStateException("L'usager ne peut annuler que ses réservations");
+        }
+        if (reservation.getStatut() == StatutReservation.CONFIRMEE || reservation.getStatut() == StatutReservation.EN_ATTENTE) {
+            // Si un exemplaire avait été bloqué, on le libère
+            if (reservation.isExemplaireVerrouille()) {
+                Ressource ressource = reservation.getRessource();
+                ressource.setExemplairesDisponibles(ressource.getExemplairesDisponibles() + 1);
+                ressourceDAO.save(ressource);
+            }
+            reservation.setStatut(StatutReservation.ANNULEE);
+            reservationDAO.save(reservation);
+        }
+        pushReservationsEnAttente(reservation.getBibliotheque().getId());
+        return reservation;
+    }
+
+    @Transactional
+    public int expirerReservations() {
+        List<Reservation> expirables = reservationDAO.findExpired(
+                List.of(StatutReservation.EN_ATTENTE, StatutReservation.CONFIRMEE),
+                LocalDateTime.now()
+        );
+        int count = 0;
+        for (Reservation res : expirables) {
+            res.setStatut(StatutReservation.EXPIREE);
+            if (res.isExemplaireVerrouille()) {
+                Ressource r = res.getRessource();
+                r.setExemplairesDisponibles(r.getExemplairesDisponibles() + 1);
+                ressourceDAO.save(r);
+            }
+            reservationDAO.save(res);
+            notifierExpiration(res);
+            count++;
+        }
+        if (count > 0 && !expirables.isEmpty()) {
+            pushReservationsEnAttente(expirables.get(0).getBibliotheque().getId());
+        }
+        return count;
+    }
+
+    private Reservation chargerReservation(Long id) {
+        return reservationDAO.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Réservation introuvable"));
+    }
+
+    private User chargerBibliothecaire(String email) {
+        User user = userDAO.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
+        if (!user.isBibliothecaire() && !user.isAdmin() && !user.isSuperAdmin()) {
+            throw new IllegalArgumentException("Accès réservé aux bibliothécaires ou admins");
+        }
+        return user;
+    }
+
+    private void validerMemeBibliotheque(Reservation reservation, User bibliothecaire) {
+        if (bibliothecaire.getBibliotheque() == null ||
+                bibliothecaire.getBibliotheque().getId() != reservation.getBibliotheque().getId()) {
+            throw new IllegalArgumentException("Réservation hors de votre bibliothèque");
+        }
+    }
+
+    private void notifierCreation(User usager, Reservation reservation) {
+        try {
+            emailService.sendVerificationEmail(usager.getEmail(), usager.getNom(), usager.getPrenom(),
+                    "reservation-" + reservation.getId());
+        } catch (Exception e) {
+            logger.warn("Notification creation reservation échouée pour {}", usager.getEmail(), e);
+        }
+    }
+
+    private void notifierBibliothecaireNouvelle(Bibliotheque bibliotheque, Reservation reservation) {
+        // TODO: Implémenter une vraie notification (email aux bibliothécaires de la bibliothèque)
+        logger.info("Nouvelle réservation à confirmer pour la bibliothèque {}", bibliotheque.getNom());
+    }
+
+    private void notifierConfirmation(Reservation reservation) {
+        try {
+            String titre = reservation.getRessource() != null ? reservation.getRessource().getTitre() : null;
+            String deadline = reservation.getDeadlineRetrait() != null ? reservation.getDeadlineRetrait().toString() : null;
+            emailService.sendReservationConfirmationEmail(
+                    reservation.getUsager().getEmail(),
+                    reservation.getUsager().getNom(),
+                    reservation.getUsager().getPrenom(),
+                    titre,
+                    deadline
+            );
+        } catch (Exception e) {
+            logger.warn("Notification confirmation échouée pour {}", reservation.getUsager().getEmail(), e);
+        }
+    }
+
+    private void notifierRejet(Reservation reservation) {
+        logger.info("Réservation {} rejetée", reservation.getId());
+    }
+
+    private void notifierExpiration(Reservation reservation) {
+        logger.info("Réservation {} expirée", reservation.getId());
+    }
+
+    private void pushReservationsEnAttente(Long bibliothequeId) {
+        try {
+            int totalGlobal = 0;
+            if (bibliothequeId != null) {
+                totalGlobal = reservationDAO.findByBibliothequeAndStatut(bibliothequeId, StatutReservation.EN_ATTENTE).size();
+                messagingTemplate.convertAndSend("/topic/reservations/en-attente/" + bibliothequeId, totalGlobal);
+            }
+            // Topic global pour tous les bibliothécaires/admins
+            messagingTemplate.convertAndSend("/topic/reservations/en-attente", totalGlobal);
+        } catch (Exception e) {
+            logger.warn("pushReservationsEnAttente failed: {}", e.getMessage());
+        }
+    }
+}
