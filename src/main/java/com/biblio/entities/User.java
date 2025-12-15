@@ -60,7 +60,8 @@ public class User  implements UserDetails {
 	    @Column(nullable = false, unique = true, length = 100)
 	    private String email;
 
-	    @Column(nullable = true)
+	    @NotBlank(message = "Le mot de passe est obligatoire")
+	    @Column(nullable = false)
 	    private String motDePasse;
 
 	    @Pattern(regexp = "^\\+?[0-9\\s\\-()]{8,20}$", message = "Format de téléphone invalide")
@@ -113,9 +114,7 @@ public class User  implements UserDetails {
 
 	@Override
 	public String getPassword() {
-	    // Pour les utilisateurs OAuth2 sans mot de passe, retourner une chaîne vide
-	    // Ils ne pourront pas utiliser l'authentification classique
-	    return motDePasse != null ? motDePasse : "";
+	    return motDePasse;
 	}
 
 	@Override
@@ -140,69 +139,12 @@ public class User  implements UserDetails {
 
 	@Override
 	public boolean isEnabled() {
-	    // Pour les comptes ADMIN et BIBLIOTHECAIRE, l'email vérifié n'est pas requis
-	    // Seuls les USAGER doivent vérifier leur email
-	    if (role == Role.ADMIN || role == Role.SUPER_ADMIN || role == Role.BIBLIOTHECAIRE) {
-	        return actif != null && actif;
-	    }
-	    // Pour les usagers, l'email doit être vérifié
-	    return actif != null && actif && emailVerifie != null && emailVerifie;
+	    return actif && emailVerifie;
 	}
 
-    public String getNomComplet() {
-        String p = prenom != null ? prenom.trim() : "";
-        String n = nom != null ? nom.trim() : "";
-        if (!p.isEmpty() && p.equalsIgnoreCase(n)) {
-            return p;
-        }
-        String full = (p + " " + n).trim();
-        return full.isEmpty() ? p : full;
-    }
-    public void setNom(String nom) {
-        this.nom = nom;
-    }
-
-    public void setPrenom(String prenom) {
-        this.prenom = prenom;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-    public Long getId() {
-        return id;
-    }
-    public void setMotDePasse(String motDePasse) {
-        this.motDePasse = motDePasse;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
-    }
-
-    public void setEmailVerifie(boolean emailVerifie) {
-        this.emailVerifie = emailVerifie;
-    }
-
-    public void setActif(boolean actif) {
-        this.actif = actif;
-    }
-
-    public void setDateInscription(LocalDateTime dateInscription) {
-        this.dateInscription = dateInscription;
-    }
-
-	    // Getter explicite pour email (même si @Getter devrait le générer)
-	    // Cela garantit que getEmail() existe même si Lombok ne fonctionne pas correctement
-	    public String getEmail() {
-	        return email;
-	    }
-
-	    // Getter explicite pour role (même si @Getter devrait le générer)
-	    // Cela garantit que getRole() existe même si Lombok ne fonctionne pas correctement
-	    public Role getRole() {
-	        return role;
-	    }
+	    public String getNomComplet() {
+	    return prenom + " " + nom;
+	}
 
 	    public boolean isUsager() {
 	    return role == Role.USAGER;
@@ -219,33 +161,5 @@ public class User  implements UserDetails {
 	    public boolean isSuperAdmin() {
 	    return role == Role.SUPER_ADMIN;
 	}
-	    public String getPrenom() {
-	        return prenom;
-	    }
-	    
-	    public String getNom() {
-	        return nom;
-	    }
 
-		public boolean getActif() {
-			// TODO Auto-generated method stub
-			return actif;
-		}
-
-		public boolean getEmailVerifie() {
-			// TODO Auto-generated method stub
-			return emailVerifie;
-		}
-
-		public Bibliotheque getBibliotheque() {
-		    return bibliotheque;
-		}
-
-
-		public LocalDateTime getDateInscription() {
-			// TODO Auto-generated method stub
-			return dateInscription;
-		}
-	    
-
-}
+	}
