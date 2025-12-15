@@ -2,9 +2,7 @@ package com.biblio.controllers;
 
 import com.biblio.dao.UserDAO;
 import com.biblio.entities.User;
-import com.biblio.enums.Role;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,23 +16,17 @@ public class DashboardController {
         this.userDAO = userDAO;
     }
 
-    /**
-     * Méthode utilitaire pour obtenir l'URL du dashboard selon le rôle
-     */
-    public static String getDashboardUrlForRole(Role role) {
+    public static String getDashboardUrlForRole(com.biblio.enums.Role role) {
+        if (role == null) return "/dashboard";
         return switch (role) {
-            case SUPER_ADMIN -> "/super-admin/dashboard";
-            case ADMIN -> "/bibliotheque-admin/dashboard";
-            case BIBLIOTHECAIRE -> "/bibliothecaire/dashboard";
             case USAGER -> "/usager/dashboard";
+            case BIBLIOTHECAIRE -> "/bibliothecaire/dashboard";
+            case ADMIN -> "/bibliotheque-admin/dashboard";
+            case SUPER_ADMIN -> "/admin/dashboard";
         };
     }
 
-    /**
-     * Redirige vers le dashboard approprié selon le rôle de l'utilisateur
-     */
     @GetMapping("/dashboard")
-    @PreAuthorize("isAuthenticated()")
     public String dashboard(
             @AuthenticationPrincipal UserDetails userDetails,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String success,
@@ -53,162 +45,8 @@ public class DashboardController {
                     .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
         }
 
-        // Rediriger vers le dashboard approprié selon le rôle
-        String dashboardUrl = getDashboardUrlForRole(user.getRole());
-        return "redirect:" + dashboardUrl;
-    }
-
-    /**
-     * Dashboard pour les usagers
-     */
-    @GetMapping("/usager/dashboard")
-    public String usagerDashboard(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String success,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String error,
-            Model model,
-            jakarta.servlet.http.HttpServletRequest request) {
-        if (userDetails == null) {
-            return "redirect:/login";
-        }
-
-        User user = (User) model.getAttribute("currentUser");
-        if (user == null) {
-            user = userDAO.findByEmail(userDetails.getUsername())
-                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-        }
-
-        // Vérifier que l'utilisateur est bien un usager
-        if (!user.isUsager()) {
-            return "redirect:" + getDashboardUrlForRole(user.getRole());
-        }
-
         model.addAttribute("user", user);
-        addMessagesToModel(model, request, success, error);
         
-        return "dashboard-usager";
-    }
-
-    /**
-     * Dashboard pour les bibliothécaires
-     */
-    @GetMapping("/bibliothecaire/dashboard")
-    public String bibliothecaireDashboard(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String success,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String error,
-            Model model,
-            jakarta.servlet.http.HttpServletRequest request) {
-        if (userDetails == null) {
-            return "redirect:/login";
-        }
-
-        User user = (User) model.getAttribute("currentUser");
-        if (user == null) {
-            user = userDAO.findByEmail(userDetails.getUsername())
-                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-        }
-
-        // Vérifier que l'utilisateur est bien un bibliothécaire
-        if (!user.isBibliothecaire()) {
-            return "redirect:" + getDashboardUrlForRole(user.getRole());
-        }
-
-        model.addAttribute("user", user);
-        addMessagesToModel(model, request, success, error);
-        
-        return "dashboard-bibliothecaire";
-    }
-
-    /**
-     * Dashboard pour les super administrateurs
-     */
-    @GetMapping("/super-admin/dashboard")
-    public String superAdminDashboard(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String success,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String error,
-            Model model,
-            jakarta.servlet.http.HttpServletRequest request) {
-        if (userDetails == null) {
-            return "redirect:/login";
-        }
-
-        User user = (User) model.getAttribute("currentUser");
-        if (user == null) {
-            user = userDAO.findByEmail(userDetails.getUsername())
-                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-        }
-
-        // Vérifier que l'utilisateur est bien un super administrateur
-        if (!user.isSuperAdmin()) {
-            return "redirect:" + getDashboardUrlForRole(user.getRole());
-        }
-
-        model.addAttribute("user", user);
-        addMessagesToModel(model, request, success, error);
-        
-        return "dashboard-admin";
-    }
-
-    /**
-     * Route de compatibilité pour /admin/dashboard - redirige vers le bon dashboard selon le rôle
-     */
-    @GetMapping("/admin/dashboard")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-    public String adminDashboardCompatibility(
-            @AuthenticationPrincipal UserDetails userDetails,
-            Model model) {
-        if (userDetails == null) {
-            return "redirect:/login";
-        }
-
-        User user = (User) model.getAttribute("currentUser");
-        if (user == null) {
-            user = userDAO.findByEmail(userDetails.getUsername())
-                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-        }
-
-        // Rediriger vers le dashboard approprié selon le rôle
-        return "redirect:" + getDashboardUrlForRole(user.getRole());
-    }
-
-    /**
-     * Dashboard pour les administrateurs de bibliothèque
-     */
-    @GetMapping("/bibliotheque-admin/dashboard")
-    public String bibliothequeAdminDashboard(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String success,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String error,
-            Model model,
-            jakarta.servlet.http.HttpServletRequest request) {
-        if (userDetails == null) {
-            return "redirect:/login";
-        }
-
-        User user = (User) model.getAttribute("currentUser");
-        if (user == null) {
-            user = userDAO.findByEmail(userDetails.getUsername())
-                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-        }
-
-        // Vérifier que l'utilisateur est bien un administrateur de bibliothèque
-        if (!user.isAdmin()) {
-            return "redirect:" + getDashboardUrlForRole(user.getRole());
-        }
-
-        model.addAttribute("user", user);
-        addMessagesToModel(model, request, success, error);
-        
-        return "dashboard-bibliotheque-admin";
-    }
-
-    /**
-     * Méthode utilitaire pour ajouter les messages au modèle
-     */
-    private void addMessagesToModel(Model model, jakarta.servlet.http.HttpServletRequest request,
-                                   String success, String error) {
         // Récupérer les messages depuis la session
         jakarta.servlet.http.HttpSession session = request.getSession(false);
         if (session != null) {
@@ -232,6 +70,8 @@ public class DashboardController {
         if (error != null && !error.isEmpty() && !model.containsAttribute("errorMessage")) {
             model.addAttribute("errorMessage", error);
         }
+        
+        return "dashboard";
     }
 }
 

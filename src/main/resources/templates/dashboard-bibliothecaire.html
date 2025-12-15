@@ -233,7 +233,7 @@
 	        
 	        async function loadReservationsEnAttente() {
 	            try {
-	                const resp = await fetch('/api/bibliothecaire/reservations/en-attente', {
+	                const resp = await fetch('/api/reservations/en-attente', {
 	                    headers: { 'Accept': 'application/json' }
 	                });
 	                const data = await resp.json();
@@ -310,8 +310,8 @@
 	        async function confirmReservation(id) {
 	            try {
 	                const commentaire = window.prompt('Commentaire (optionnel) :', '');
-	                const resp = await fetch('/api/bibliothecaire/reservations/' + id + '/confirm', {
-	                    method: 'PUT',
+	                const resp = await fetch('/api/reservations/' + id + '/confirmer', {
+	                    method: 'POST',
 	                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
 	                    body: JSON.stringify({ commentaire })
 	                });
@@ -329,8 +329,8 @@
 	        async function rejectReservation(id) {
 	            try {
 	                const raison = window.prompt('Raison du rejet :', '');
-	                const resp = await fetch('/api/bibliothecaire/reservations/' + id + '/reject', {
-	                    method: 'PUT',
+	                const resp = await fetch('/api/reservations/' + id + '/rejeter', {
+	                    method: 'POST',
 	                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
 	                    body: JSON.stringify({ raison })
 	                });
