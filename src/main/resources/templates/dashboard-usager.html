@@ -13,11 +13,34 @@
     <!-- Custom CSS -->
     <link th:href="@{/css/custom.css}" rel="stylesheet">
 </head>
-<body class="bg-gradient-primary">
+<body class="bg-light">
     <div th:replace="~{fragments/header :: header}"></div>
     <div th:replace="~{fragments/toasts :: toast-container}"></div>
 
     <div class="container py-5">
+        <!-- Bandeau usager -->
+        <div class="card shadow-lg border-0 mb-4">
+            <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 text-primary fs-4">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <div>
+                        <h2 class="h4 fw-bold text-primary mb-1">Espace Usager</h2>
+                        <p class="mb-0 text-muted">Bonjour <strong th:text="${user.nomComplet}">nom</strong>, bienvenue dans votre espace personnel.</p>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a th:href="@{/user/profile}" class="btn btn-outline-primary">
+                        <i class="bi bi-person-gear me-2"></i>Mon Profil
+                    </a>
+                    <a href="/login?logout" class="btn btn-outline-secondary">
+                        <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <!-- Message de bienvenue -->
         <div class="card shadow-lg border-0 mb-4 animate-fade-in">
             <div class="card-body p-4">
@@ -110,73 +133,105 @@
                         <div id="pretsEmpty" class="text-muted">Aucun prêt en cours.</div>
                     </div>
                 </div>
-
-                <div class="card shadow-lg border-0">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0"><i class="bi bi-stars me-2"></i>Recommandations personnalisées</h5>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-group" id="recoList"></ul>
-                    </div>
-                </div>
             </div>
 
             <div class="col-lg-4">
-                <div class="card shadow-lg border-0 mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Informations du compte</h5>
-                    </div>
-                    <div class="card-body">
-                        <table class="table table-borderless">
-                            <tr>
-                                <td class="fw-semibold text-muted">Nom complet:</td>
-                                <td th:text="${user.nomComplet}">Nom Complet</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-semibold text-muted">Email:</td>
-                                <td th:text="${user.email}">email@example.com</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-semibold text-muted">Rôle:</td>
-                                <td><span class="badge bg-primary" th:text="${user.role.displayName}">Usager</span></td>
-                            </tr>
-                            <tr>
-                                <td class="fw-semibold text-muted">Statut:</td>
-                                <td><span class="badge" th:classappend="${user.actif} ? 'bg-success' : 'bg-danger'" th:text="${user.actif} ? 'Actif' : 'Inactif'"></span></td>
-                            </tr>
-                            <tr th:if="${user.bibliotheque != null}">
-                                <td class="fw-semibold text-muted">Bibliothèque:</td>
-                                <td th:text="${user.bibliotheque.nom}">Bibliothèque</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="card shadow-lg border-0 mb-4">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Actions rapides</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <a th:href="@{/user/profile}" class="btn btn-outline-primary"><i class="bi bi-person-gear me-2"></i>Gérer mon profil</a>
-                            <a th:href="@{/}" class="btn btn-outline-secondary"><i class="bi bi-house me-2"></i>Retour à l'accueil</a>
-                            <a href="/login?logout" class="btn btn-outline-danger w-100" id="logoutLink"><i class="bi bi-box-arrow-right me-2"></i>Se déconnecter</a>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="card shadow-lg border-0">
                     <div class="card-header bg-secondary text-white">
                         <h5 class="mb-0"><i class="bi bi-bookmarks me-2"></i>Mes réservations</h5>
                     </div>
                     <div class="card-body">
                         <div id="reservationsEmpty" class="text-muted">Aucune réservation.</div>
+                        <div id="reservationsList" class="list-group list-group-flush"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        
+        <!-- Explorer le catalogue -->
+        <div class="card shadow-lg border-0 mt-4">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="mb-0"><i class="bi bi-search me-2"></i>Explorer le catalogue</h5>
+                <span class="badge bg-light text-info fw-semibold" id="catalogResultsCount">0 résultat</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 align-items-end mb-4">
+                    <div class="col-lg-4">
+                        <label for="catalogSearch" class="form-label fw-semibold text-muted">Rechercher par titre, auteur ou ISBN</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white text-muted"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" id="catalogSearch" placeholder="Ex: Hugo, programmation, poésie...">
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <label for="catalogCategorie" class="form-label fw-semibold text-muted">Catégorie</label>
+                        <select class="form-select" id="catalogCategorie">
+                            <option value="">Toutes les catégories</option>
+                            <option value="LITTERATURE">Littérature</option>
+                            <option value="SCIENCES">Sciences</option>
+                            <option value="MULTIMEDIA">Multimédia</option>
+                            <option value="JEUNESSE">Jeunesse</option>
+                            <option value="HISTOIRE">Histoire</option>
+                            <option value="TECHNOLOGIE">Technologie</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-3">
+                        <label for="catalogType" class="form-label fw-semibold text-muted">Type</label>
+                        <select class="form-select" id="catalogType">
+                            <option value="">Tous les types</option>
+                            <option value="LIVRE">Livre</option>
+                            <option value="MAGAZINE">Magazine</option>
+                            <option value="DVD">DVD</option>
+                            <option value="CD">CD</option>
+                            <option value="NUMERIQUE">Numérique</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2 text-lg-end">
+                        <label for="catalogStatut" class="form-label fw-semibold text-muted">Statut</label>
+                        <select class="form-select" id="catalogStatut">
+                            <option value="">Tous</option>
+                            <option value="DISPONIBLE">Disponibles</option>
+                            <option value="INDISPONIBLE">Indisponibles</option>
+                            <option value="EN_ATTENTE">Mes réservations en attente</option>
+                            <option value="CONFIRMEE">Mes réservations confirmées</option>
+                            <option value="ANNULEE">Mes réservations annulées</option>
+                            <option value="EXPIREE">Mes réservations expirées</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-lg-12 text-lg-end">
+                        <button class="btn btn-outline-secondary" id="catalogReset">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Réinitialiser
+                        </button>
+                    </div>
+                </div>
+
+                <div id="catalogLoader" class="text-center py-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <p class="text-muted mb-0">Chargement du catalogue...</p>
+                </div>
+
+                <div id="catalogEmpty" class="alert alert-info d-none">
+                    Aucun résultat ne correspond à votre recherche. Essayez d'élargir les filtres ou de modifier le mot-clé.
+                </div>
+
+                <div class="row g-4" id="catalogGrid"></div>
+            </div>
+        </div>
+
+        <!-- Recommandations -->
+        <div class="card shadow-lg border-0 mt-4">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="mb-0"><i class="bi bi-stars me-2"></i>Recommandations personnalisées</h5>
+                <span class="text-muted small">Basées sur vos lectures récentes</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-4" id="recommendationGrid">
+                    <div class="col-12 text-center text-muted">Chargement des recommandations...</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div th:replace="~{fragments/footer :: footer}"></div>
@@ -204,71 +259,270 @@
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
         }
     </style>
-    
+
     <script th:inline="javascript">
+        const CATALOG_CATEGORY_LABELS = {
+            LITTERATURE: 'Littérature',
+            SCIENCES: 'Sciences',
+            MULTIMEDIA: 'Multimédia',
+            JEUNESSE: 'Jeunesse',
+            HISTOIRE: 'Histoire',
+            TECHNOLOGIE: 'Technologie'
+        };
+        const CATALOG_TYPE_LABELS = {
+            LIVRE: 'Livre',
+            MAGAZINE: 'Magazine',
+            DVD: 'DVD',
+            CD: 'CD',
+            NUMERIQUE: 'Numérique'
+        };
+
+        let catalogData = [];
+        let filteredCatalogData = [];
+        let reservationsParRessource = {};
+
         document.addEventListener('DOMContentLoaded', async function() {
-            try {
-                const res = await fetch('/api/prets/mes-prets');
-                const data = await res.json();
-                const items = (data && data.items) ? data.items : [];
-
-                const actifs = items.filter(i => ['EMPRUNTE','EN_COURS'].includes(i.statut)).length;
-                const reserves = items.filter(i => i.statut === 'RESERVE').length;
-                const retards = items.filter(i => i.enRetard === true || i.joursRetard > 0).length;
-                document.getElementById('actifsCount').textContent = actifs;
-                document.getElementById('reservationsCount').textContent = reserves;
-                document.getElementById('retardsCount').textContent = retards;
-
-                const tbody = document.getElementById('pretsTbody');
-                const empty = document.getElementById('pretsEmpty');
-                if (items.length === 0) {
-                    empty.style.display = 'block';
-                } else {
-                    empty.style.display = 'none';
-                    tbody.innerHTML = items.map(i => `
-                        <tr>
-                            <td>${i.ressourceTitre || 'Ressource'}</td>
-                            <td><span class="badge bg-${i.statut==='RESERVE'?'warning':(i.statut==='EMPRUNTE'?'info':(i.statut==='EN_COURS'?'primary':'success'))}">${i.statut}</span></td>
-                            <td>${i.dateRetourPrevu || '-'}</td>
-                            <td>${i.joursRetard ? i.joursRetard + ' jours' : (i.enRetard ? 'Oui' : 'Non')}</td>
-                        </tr>
-                    `).join('');
-                }
-
-                const reco = document.getElementById('recoList');
-                if (items.length === 0) {
-                    reco.innerHTML = `
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Le Petit Prince
-                            <span class="badge bg-primary">Roman</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Clean Code
-                            <span class="badge bg-success">Programmation</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            L'Algèbre pour Tous
-                            <span class="badge bg-info">Scientifique</span>
-                        </li>`;
-                } else {
-                    const categories = items.map(i => i.categorie).filter(Boolean);
-                    const top = [...new Set(categories)].slice(0,3);
-                    if (top.length === 0) {
-                        reco.innerHTML = '<li class="list-group-item">Aucune recommandation disponible.</li>';
-                    } else {
-                        reco.innerHTML = top.map(c => `
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                Suggestions dans ${c}
-                                <span class="badge bg-secondary">Catégorie</span>
-                            </li>
-                        `).join('');
-                    }
-                }
-            } catch (e) {
-                document.getElementById('pretsEmpty').style.display = 'block';
-                document.getElementById('recoList').innerHTML = '<li class="list-group-item">Recommandations indisponibles.</li>';
-            }
+            await chargerCatalogue();
+            await chargerReservationsUtilisateur();
+            initialiserFiltresCatalogue();
         });
+
+        async function chargerCatalogue() {
+            const loader = document.getElementById('catalogLoader');
+            const grid = document.getElementById('catalogGrid');
+            loader.classList.remove('d-none');
+            grid.innerHTML = '';
+            try {
+                const resp = await fetch('/api/ressources');
+                if (!resp.ok) throw new Error('Chargement impossible');
+                const data = await resp.json();
+                // Supporte plusieurs formats: tableau direct, {content: [...]}, {ressources: [...]}
+                if (Array.isArray(data)) {
+                    catalogData = data;
+                } else if (data && Array.isArray(data.content)) {
+                    catalogData = data.content;
+                } else if (data && Array.isArray(data.ressources)) {
+                    catalogData = data.ressources;
+                } else {
+                    catalogData = [];
+                }
+                filteredCatalogData = [...catalogData];
+                renderCatalogue();
+            } catch (e) {
+                console.error('Erreur catalogue', e);
+                filteredCatalogData = [];
+                renderCatalogue();
+            } finally {
+                loader.classList.add('d-none');
+            }
+        }
+
+        async function chargerReservationsUtilisateur() {
+            try {
+                const resp = await fetch('/api/reservations/mes');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const list = Array.isArray(data.reservations) ? data.reservations : (data.ressources || []);
+                reservationsParRessource = {};
+                list.forEach(r => {
+                    if (r.ressource && r.ressource.id) {
+                        reservationsParRessource[r.ressource.id] = r.statut || 'EN_ATTENTE';
+                    }
+                });
+                renderCatalogue();
+                renderReservationsListe(list);
+            } catch (e) {
+                console.warn('Impossible de charger les réservations usager', e);
+            }
+        }
+
+        function initialiserFiltresCatalogue() {
+            const search = document.getElementById('catalogSearch');
+            const categorie = document.getElementById('catalogCategorie');
+            const type = document.getElementById('catalogType');
+            const statut = document.getElementById('catalogStatut');
+            const reset = document.getElementById('catalogReset');
+            if (search) search.addEventListener('input', appliquerFiltresCatalogue);
+            if (categorie) categorie.addEventListener('change', appliquerFiltresCatalogue);
+            if (type) type.addEventListener('change', appliquerFiltresCatalogue);
+            if (statut) statut.addEventListener('change', appliquerFiltresCatalogue);
+            if (reset) reset.addEventListener('click', () => {
+                search.value = '';
+                categorie.value = '';
+                if (type) type.value = '';
+                if (statut) statut.value = '';
+                appliquerFiltresCatalogue();
+            });
+        }
+
+        function normaliserTexte(val) {
+            return (val || '')
+                .toString()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim();
+        }
+
+        function appliquerFiltresCatalogue() {
+            const terme = normaliserTexte(document.getElementById('catalogSearch')?.value || '');
+            const categorie = document.getElementById('catalogCategorie')?.value || '';
+            const type = document.getElementById('catalogType')?.value || '';
+            const statut = document.getElementById('catalogStatut')?.value || '';
+            filteredCatalogData = catalogData.filter(item => {
+                const titre = normaliserTexte(item.titre);
+                const auteur = normaliserTexte(item.auteur);
+                const catCode = item.categorie || '';
+                const catLabel = normaliserTexte(CATALOG_CATEGORY_LABELS[catCode] || '');
+                const typeCode = item.typeRessource || '';
+                const typeLabel = normaliserTexte(CATALOG_TYPE_LABELS[typeCode] || '');
+                const disponibles = item.exemplairesDisponibles ?? 0;
+                const reservationStatut = reservationsParRessource[item.id];
+
+                const catOk = !categorie || catCode === categorie;
+                const typeOk = !type || typeCode === type;
+                const dispoOk = !statut ||
+                    (statut === 'DISPONIBLE' && disponibles > 0) ||
+                    (statut === 'INDISPONIBLE' && disponibles <= 0) ||
+                    (['EN_ATTENTE','CONFIRMEE','ANNULEE','EXPIREE'].includes(statut) && reservationStatut === statut);
+                const texteOk = !terme || titre.includes(terme) || auteur.includes(terme) || catLabel.includes(terme) || typeLabel.includes(terme);
+                return catOk && typeOk && dispoOk && texteOk;
+            });
+            renderCatalogue();
+        }
+
+        function renderCatalogue() {
+            const grid = document.getElementById('catalogGrid');
+            const empty = document.getElementById('catalogEmpty');
+            const countBadge = document.getElementById('catalogResultsCount');
+
+            if (filteredCatalogData.length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('d-none');
+                countBadge.textContent = '0 résultat';
+                return;
+            }
+
+            empty.classList.add('d-none');
+            countBadge.textContent = filteredCatalogData.length + (filteredCatalogData.length > 1 ? ' résultats' : ' résultat');
+
+            grid.innerHTML = filteredCatalogData.map(createCatalogueCard).join('');
+
+            grid.querySelectorAll('.btn-reserver').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const ressourceId = e.currentTarget.getAttribute('data-ressource-id');
+                    await reserverRessource(ressourceId);
+                });
+            });
+        }
+
+        async function reserverRessource(ressourceId) {
+            try {
+                const resp = await fetch('/api/reservations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ressourceId })
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.success) {
+                    alert(data.error || 'Réservation impossible');
+                    return;
+                }
+                await chargerReservationsUtilisateur();
+                appliquerFiltresCatalogue();
+                alert('Réservation enregistrée. En attente de confirmation.');
+            } catch (e) {
+                console.error('Erreur réservation', e);
+                alert('Erreur lors de la réservation.');
+            }
+        }
+
+        async function annulerReservation(id) {
+            try {
+                const resp = await fetch(`/api/reservations/${id}/annuler`, { method: 'POST' });
+                if (!resp.ok) throw new Error('Annulation impossible');
+                await chargerReservationsUtilisateur();
+                appliquerFiltresCatalogue();
+            } catch (e) {
+                alert('Annulation impossible');
+            }
+        }
+
+        function createCatalogueCard(ressource) {
+            const categorie = CATALOG_CATEGORY_LABELS[ressource.categorie] || 'Divers';
+            const typeLabel = CATALOG_TYPE_LABELS[ressource.typeRessource] || '';
+            const cover = ressource.imageCouverture || 'https://illustrations.popsy.co/gray/bookshelf.svg';
+            const disponibles = ressource.exemplairesDisponibles ?? 0;
+            const statutReservation = reservationsParRessource[ressource.id];
+            const disabled = disponibles === 0 && !statutReservation;
+            let badgeReservation = '';
+            if (statutReservation) {
+                badgeReservation = `<span class="badge bg-info-subtle text-info">${statutReservation.replaceAll('_', ' ')}</span>`;
+            }
+
+            return `
+                <div class="col-md-6 col-xl-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="ratio ratio-16x9 rounded-top overflow-hidden">
+                            <img src="${cover}" alt="${ressource.titre || 'Ressource'}" class="w-100 h-100" style="object-fit: cover;">
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex gap-2 mb-2 flex-wrap">
+                                <span class="badge bg-primary-subtle text-primary">${categorie}</span>
+                                ${typeLabel ? `<span class="badge bg-secondary-subtle text-secondary">${typeLabel}</span>` : ''}
+                                ${badgeReservation}
+                            </div>
+                            <h5 class="fw-bold mb-1">${ressource.titre || 'Titre non renseigné'}</h5>
+                            <p class="text-muted small mb-2"><i class="bi bi-pen me-1"></i>${ressource.auteur || 'Auteur inconnu'}</p>
+                            <p class="text-muted small mb-3">${tronquer(ressource.description || 'Aucune description disponible.', 120)}</p>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="badge ${disponibles > 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">
+                                    ${disponibles > 0 ? `${disponibles} disponibles` : 'Indisponible'}
+                                </span>
+                                <button class="btn btn-sm btn-outline-primary btn-reserver" data-ressource-id="${ressource.id}" ${disabled ? 'disabled' : ''}>
+                                    <i class="bi bi-bookmark-plus me-1"></i>${statutReservation ? 'Réservé' : 'Réserver'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderReservationsListe(list) {
+            const empty = document.getElementById('reservationsEmpty');
+            const container = document.getElementById('reservationsList');
+            if (!container) return;
+            if (!list || list.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('d-none');
+                return;
+            }
+            empty.classList.add('d-none');
+            container.innerHTML = list.map(r => {
+                const statut = r.statut || 'EN_ATTENTE';
+                const badge = `<span class="badge bg-secondary-subtle text-secondary me-2">${statut.replaceAll('_',' ')}</span>`;
+                const titre = r.ressource?.titre || 'Ressource';
+                const auteur = r.ressource?.auteur || '';
+                return `
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            ${badge}
+                            <div class="fw-semibold">${titre}</div>
+                            <div class="text-muted small">${auteur}</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            ${statut === 'EN_ATTENTE' ? `<button class="btn btn-sm btn-outline-danger" onclick="annulerReservation(${r.id})"><i class="bi bi-x-circle me-1"></i>Annuler</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function tronquer(text, max) {
+            if (!text) return '';
+            return text.length > max ? text.substring(0, max).trim() + '…' : text;
+        }
     </script>
 </body>
 </html>

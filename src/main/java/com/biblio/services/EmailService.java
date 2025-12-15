@@ -63,5 +63,31 @@ public class EmailService {
             throw new RuntimeException("Impossible d'envoyer l'email de vérification", e);
         }
     }
+    
+    public void sendReservationConfirmationEmail(String toEmail, String nom, String prenom, String titreRessource, String deadlineRetraitDisplay) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Votre livre est prêt à être emprunté - Biblio");
+            String body = String.format(
+                "Bonjour %s %s,\n\n" +
+                "Bonne nouvelle ! Votre réservation pour \"%s\" a été confirmée.\n\n" +
+                "Le livre est prêt à être retiré à la bibliothèque.\n" +
+                "Date limite de retrait: %s\n\n" +
+                "Passé ce délai, la réservation pourra être annulée.\n\n" +
+                "Cordialement,\n" +
+                "Votre bibliothèque",
+                prenom, nom, titreRessource != null ? titreRessource : "Ressource", 
+                deadlineRetraitDisplay != null ? deadlineRetraitDisplay : "bientôt"
+            );
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Email de confirmation de réservation envoyé à : {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Erreur lors de l'envoi de l'email de confirmation à {} : {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Impossible d'envoyer l'email de confirmation de réservation", e);
+        }
+    }
 }
 
