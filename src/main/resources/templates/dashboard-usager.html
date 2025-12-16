@@ -480,11 +480,9 @@
                 ? reservationsUsagerList.filter(r => r.statut === 'EN_ATTENTE').length
                 : 0;
             const limiteAtteinte = actifsReservations >= 2;
+            const hasBlockedLoan = Array.isArray(pretsUsagerList) && pretsUsagerList.some(p => p.statut === 'BLOQUE');
             
-            // Le bouton n'est désactivé que si la réservation EN_ATTENTE existe
-            // ou si l'ISBN est déjà réservé en attente.
-            // On laisse le bouton actif même si la limite est atteinte pour que le backend renvoie l'erreur explicite.
-            const disabled = isActiveReservation || dejaReserveMemeIsbn;
+            const disabled = isActiveReservation || dejaReserveMemeIsbn || hasBlockedLoan;
 
             let badgeReservation = '';
             if (statutReservation) {
