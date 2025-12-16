@@ -212,6 +212,7 @@
                                         <th>Ville</th>
                                         <th>Adresse</th>
                                         <th>Téléphone</th>
+                                        <th>Capacité</th>
                                         <th>Statut</th>
                                         <th>Actions</th>
                                     </tr>
@@ -226,6 +227,15 @@
                                     </tr>
                                 </tbody>
                             </table>
+                            <div class="d-flex justify-content-between align-items-center mt-2" id="bibliothequesPagination">
+                                <div>
+                                    <small class="text-muted">Page <span id="biblioPageNum">1</span>/<span id="biblioTotalPages">1</span></small>
+                                </div>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-outline-secondary" id="biblioPrevBtn">Précédent</button>
+                                    <button class="btn btn-outline-secondary" id="biblioNextBtn">Suivant</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -367,6 +377,59 @@
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-check-circle me-2"></i>Créer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour modifier une bibliothèque -->
+    <div class="modal fade" id="editBibliothequeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square me-2"></i>Modifier la Bibliothèque
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editBibliothequeForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="editBiblioId">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editBiblioNom" class="form-label">Nom *</label>
+                                <input type="text" class="form-control" id="editBiblioNom" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editBiblioVille" class="form-label">Ville *</label>
+                                <input type="text" class="form-control" id="editBiblioVille" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editBiblioAdresse" class="form-label">Adresse *</label>
+                            <input type="text" class="form-control" id="editBiblioAdresse" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editBiblioTelephone" class="form-label">Téléphone</label>
+                                <input type="tel" class="form-control" id="editBiblioTelephone">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editBiblioCapaciteStock" class="form-label">Capacité de stock</label>
+                                <input type="number" class="form-control" id="editBiblioCapaciteStock" min="0">
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="editBiblioActif">
+                            <label class="form-check-label" for="editBiblioActif">Bibliothèque active</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-check-circle me-2"></i>Enregistrer
                         </button>
                     </div>
                 </form>
@@ -588,9 +651,11 @@
         }
 
         // Charger la liste des bibliothèques
-        async function loadBibliotheques() {
+        let biblioPage = 0;
+        const biblioSize = 10;
+        async function loadBibliotheques(page = biblioPage) {
             try {
-                const data = await apiRequest('/api/admin/bibliotheques');
+                const data = await apiRequest(`/api/admin/bibliotheques?page=${page}&size=${biblioSize}`);
                 const tbody = document.getElementById('bibliothequesTableBody');
                 
                 if (data.success && data.bibliotheques) {
@@ -606,12 +671,18 @@
                             <td>${biblio.ville}</td>
                             <td>${biblio.adresse || '-'}</td>
                             <td>${biblio.telephone || '-'}</td>
+                            <td>${biblio.capaciteStock ?? '-'}</td>
                             <td>
                                 <span class="badge ${biblio.actif ? 'bg-success' : 'bg-danger'}">
                                     ${biblio.actif ? 'Active' : 'Inactive'}
                                 </span>
                             </td>
                             <td>
+                                <button class="btn btn-sm btn-outline-warning me-1" 
+                                        onclick="showEditBibliothequeModal('${encodeURIComponent(JSON.stringify(biblio))}')" 
+                                        title="Modifier">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
                                 <button class="btn btn-sm btn-outline-danger" 
                                         onclick="deleteBibliotheque(${biblio.id}, '${biblio.nom}')" 
                                         title="Supprimer">
@@ -620,6 +691,11 @@
                             </td>
                         </tr>
                     `).join('');
+                    biblioPage = data.page || 0;
+                    document.getElementById('biblioPageNum').textContent = (biblioPage + 1);
+                    document.getElementById('biblioTotalPages').textContent = (data.totalPages || 1);
+                    document.getElementById('biblioPrevBtn').disabled = !(data.hasPrevious);
+                    document.getElementById('biblioNextBtn').disabled = !(data.hasNext);
                 } else {
                     tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erreur lors du chargement des bibliothèques</td></tr>';
                 }
@@ -629,6 +705,79 @@
                     '<tr><td colspan="7" class="text-center text-danger">Erreur lors du chargement</td></tr>';
             }
         }
+
+        // Afficher modal d'édition
+        function showEditBibliothequeModal(biblioJson) {
+            let b;
+            try {
+                b = typeof biblioJson === 'string' ? JSON.parse(decodeURIComponent(biblioJson)) : biblioJson;
+            } catch (e) {
+                console.error('Erreur de parsing des données bibliothèque:', e, biblioJson);
+                alert('Impossible d’ouvrir le formulaire d’édition. Veuillez réessayer.');
+                return;
+            }
+            document.getElementById('editBiblioId').value = b.id;
+            document.getElementById('editBiblioNom').value = b.nom || '';
+            document.getElementById('editBiblioVille').value = b.ville || '';
+            document.getElementById('editBiblioAdresse').value = b.adresse || '';
+            document.getElementById('editBiblioTelephone').value = b.telephone || '';
+            document.getElementById('editBiblioCapaciteStock').value = b.capaciteStock ?? '';
+            document.getElementById('editBiblioActif').checked = !!b.actif;
+            const modal = new bootstrap.Modal(document.getElementById('editBibliothequeModal'));
+            modal.show();
+        }
+
+        // Soumettre édition bibliothèque
+        document.getElementById('editBibliothequeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editBiblioId').value;
+            const nom = document.getElementById('editBiblioNom').value.trim();
+            const ville = document.getElementById('editBiblioVille').value.trim();
+            const adresse = document.getElementById('editBiblioAdresse').value.trim();
+            const telephone = document.getElementById('editBiblioTelephone').value.trim();
+            const capaciteStockRaw = document.getElementById('editBiblioCapaciteStock').value.trim();
+            const actif = document.getElementById('editBiblioActif').checked;
+
+            if (!nom || !ville || !adresse) {
+                alert('Nom, ville et adresse sont obligatoires');
+                return;
+            }
+            if (capaciteStockRaw && parseInt(capaciteStockRaw) < 0) {
+                alert('La capacité ne peut pas être négative');
+                return;
+            }
+            if (telephone && !/^\+?[0-9\s\-()]{8,20}$/.test(telephone)) {
+                alert('Format de téléphone invalide');
+                return;
+            }
+
+            const payload = {
+                nom,
+                ville,
+                adresse,
+                telephone: telephone || null,
+                capaciteStock: capaciteStockRaw ? parseInt(capaciteStockRaw) : null,
+                actif
+            };
+
+            try {
+                const data = await apiRequest(`/api/admin/bibliotheques/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('editBibliothequeModal')).hide();
+                    loadBibliotheques();
+                    loadBibliothequesForSelect();
+                    alert('Bibliothèque mise à jour avec succès !');
+                } else {
+                    alert('Erreur: ' + (data.message || 'Impossible de mettre à jour la bibliothèque'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la mise à jour de la bibliothèque');
+            }
+        });
 
         // Afficher le modal de création de bibliothèque
         function showCreateBibliothequeModal() {
@@ -872,7 +1021,15 @@
             
             // Charger les bibliothèques quand l'onglet est cliqué
             document.getElementById('bibliotheques-tab').addEventListener('shown.bs.tab', function() {
-                loadBibliotheques();
+                loadBibliotheques(0);
+            });
+            document.getElementById('biblioPrevBtn').addEventListener('click', () => {
+                if (biblioPage > 0) {
+                    loadBibliotheques(biblioPage - 1);
+                }
+            });
+            document.getElementById('biblioNextBtn').addEventListener('click', () => {
+                loadBibliotheques(biblioPage + 1);
             });
             
             // Charger les logs quand l'onglet est cliqué
