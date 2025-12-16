@@ -42,7 +42,7 @@ public class PretService {
         if (userId == null || ressourceId == null) {
             return Optional.empty();
         }
-        Optional<Pret> opt = pretDAO.findFirstByUtilisateurIdAndRessourceIdAndStatut(userId, ressourceId, StatutPret.RESERVE);
+        Optional<Pret> opt = pretDAO.findFirstByUtilisateur_IdAndRessource_IdAndStatut(userId, ressourceId, StatutPret.RESERVE);
         if (opt.isPresent()) {
             Pret pret = opt.get();
             pret.emprunter();
