@@ -258,24 +258,78 @@ public class AdminController {
 
     /**
      * GET /api/admin/bibliotheques
-     * Liste toutes les bibliothèques
+     * Liste paginée de toutes les bibliothèques
      */
     @GetMapping("/bibliotheques")
-    public ResponseEntity<Map<String, Object>> getAllBibliotheques() {
+    public ResponseEntity<Map<String, Object>> getAllBibliotheques(
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer size) {
         try {
-            List<Map<String, Object>> bibliotheques = bibliothequeService.getAll().stream()
+            var pageable = org.springframework.data.domain.PageRequest.of(
+                    Math.max(page, 0),
+                    Math.max(size, 1),
+                    org.springframework.data.domain.Sort.by("nom").ascending()
+            );
+            var paged = bibliothequeService.getAllPaged(pageable);
+
+            List<Map<String, Object>> bibliotheques = paged.getContent().stream()
                     .map(this::bibliothequeToMap)
                     .collect(Collectors.toList());
-            
+
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("bibliotheques", bibliotheques);
-            result.put("total", bibliotheques.size());
+            result.put("page", paged.getNumber());
+            result.put("size", paged.getSize());
+            result.put("totalElements", paged.getTotalElements());
+            result.put("totalPages", paged.getTotalPages());
+            result.put("hasNext", paged.hasNext());
+            result.put("hasPrevious", paged.hasPrevious());
+            result.put("total", paged.getTotalElements());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
             error.put("error", "Failed to fetch bibliotheques");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * PUT /api/admin/bibliotheques/{id}
+     * Met à jour une bibliothèque (SUPER_ADMIN)
+     */
+    @PutMapping("/bibliotheques/{id}")
+    public ResponseEntity<Map<String, Object>> updateBibliotheque(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> updates) {
+        try {
+            Bibliotheque updated = bibliothequeService.updateBibliotheque(
+                    id,
+                    (String) updates.get("nom"),
+                    (String) updates.get("adresse"),
+                    (String) updates.get("ville"),
+                    (String) updates.get("telephone"),
+                    updates.get("capaciteStock") != null ? ((Number) updates.get("capaciteStock")).intValue() : null,
+                    updates.get("actif") != null ? (Boolean) updates.get("actif") : null
+            );
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "Bibliothèque mise à jour avec succès");
+            result.put("bibliotheque", bibliothequeToMap(updated));
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to update bibliotheque");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to update bibliotheque");
             error.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
