@@ -53,22 +53,15 @@ public class ReservationService {
         }
 
         List<StatutReservation> statutsActifsReservation = List.of(StatutReservation.EN_ATTENTE, StatutReservation.CONFIRMEE);
-        long dejaReserveMemeNomCat = reservationDAO.countDuplicateNomCategorie(
-                usager.getId(),
-                ressource.getTitre(),
-                ressource.getCategorie(),
-                statutsActifsReservation
-        );
-        if (dejaReserveMemeNomCat > 0) {
-            throw new IllegalStateException("Une réservation existe déjà pour cette ressource dans cette catégorie");
+        long dejaReserveMemeIsbn = (ressource.getIsbn() != null)
+                ? reservationDAO.countDuplicateIsbn(usager.getId(), ressource.getIsbn(), statutsActifsReservation)
+                : 0;
+        if (dejaReserveMemeIsbn > 0) {
+            throw new IllegalStateException("Une réservation existe déjà pour cet ISBN");
         }
         long reservationsActives = reservationDAO.countActivesByUsager(usager.getId(), statutsActifsReservation);
-        long pretsActifs = pretService.getPretsForUser(usagerEmail).stream()
-                .filter(p -> p.getStatut() == StatutPret.RESERVE || p.getStatut() == StatutPret.EN_COURS || p.getStatut() == StatutPret.EMPRUNTE)
-                .count();
-        long totalActifs = reservationsActives + pretsActifs;
-        if (totalActifs >= 2) {
-            throw new IllegalStateException("Limite atteinte: au maximum deux réservations différentes avec prêts actifs");
+        if (reservationsActives >= 2) {
+            throw new IllegalStateException("Limite atteinte: au maximum deux réservations actives");
         }
 
         Reservation reservation = Reservation.builder()

@@ -47,4 +47,12 @@ public interface ReservationDAO extends JpaRepository<Reservation, Long> {
                                     @Param("titre") String titre,
                                     @Param("categorie") Categorie categorie,
                                     @Param("statuts") List<StatutReservation> statuts);
+
+    @Query("SELECT COUNT(r) FROM Reservation r " +
+            "WHERE r.usager.id = :usagerId " +
+            "AND r.statut IN (:statuts) " +
+            "AND r.ressource.isbn = :isbn")
+    long countDuplicateIsbn(@Param("usagerId") Long usagerId,
+                            @Param("isbn") String isbn,
+                            @Param("statuts") List<StatutReservation> statuts);
 }
