@@ -188,10 +188,22 @@ public class Pret {
     }
 
     public long getJoursRetard() {
-        if (!estEnRetard()) {
+        if (dateRetourPrevu == null) {
             return 0;
         }
-        return ChronoUnit.DAYS.between(dateRetourPrevu, LocalDate.now());
+        if (dateRetourEffectif != null) {
+            LocalDate effectif = dateRetourEffectif.toLocalDate();
+            if (effectif.isAfter(dateRetourPrevu)) {
+                return ChronoUnit.DAYS.between(dateRetourPrevu, effectif);
+            }
+            return 0;
+        } else {
+            LocalDate today = LocalDate.now();
+            if (today.isAfter(dateRetourPrevu)) {
+                return ChronoUnit.DAYS.between(dateRetourPrevu, today);
+            }
+            return 0;
+        }
     }
 
     private void calculerPenalite() {
