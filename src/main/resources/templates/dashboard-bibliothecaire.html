@@ -37,8 +37,39 @@
 	                    </div>
 	                </div>
 	            </div>
-	        </div>
-	
+        </div>
+
+        <div class="card shadow-lg border-0 mb-4">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-exclamation-octagon me-2"></i>Prêts bloqués
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Ressource</th>
+                                <th>Usager</th>
+                                <th>Date emprunt</th>
+                                <th>Retour prévu</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pretsBloquesTbody">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Chargement...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="pretsBloquesEmpty" class="alert alert-info d-none">
+                    <i class="bi bi-info-circle me-2"></i>Aucun prêt bloqué à afficher.
+                </div>
+            </div>
+        </div>
+        
 	        <!-- Cartes d'actions rapides pour bibliothécaire -->
 	        <div class="row g-4 mb-4">
 	            <div class="col-md-6 col-lg-4">
@@ -531,10 +562,11 @@
 	                    loadReservationsEnAttente();
 	                });
 	            }
-	            loadReservationsEnAttente();
-	            connectReservationsWS();
-	            loadPretsEmprunte();
-	            loadPretsEnCours();
+            loadReservationsEnAttente();
+            connectReservationsWS();
+            loadPretsEmprunte();
+            loadPretsEnCours();
+            loadPretsBloques();
 	            
 	            const toastElements = document.querySelectorAll('.toast');
 	            if (toastElements.length > 0) {
@@ -575,7 +607,7 @@
 	    </div>
 	    
 	    <script th:inline="javascript">
-	        async function loadPretsEnCours() {
+        async function loadPretsEnCours() {
 	            try {
 	                const resp = await fetch('/api/prets/en-cours', { headers: { 'Accept': 'application/json' } });
 	                const data = await resp.json();
@@ -624,12 +656,88 @@
 	                } else {
 	                    tbody.innerHTML = rows.join('');
 	                    if (empty) empty.classList.add('d-none');
-	                }
+        }
 	            } catch (e) {
 	                const tbody = document.getElementById('pretsEnCoursTbody');
 	                if (tbody) {
 	                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur de chargement</td></tr>';
 	                }
+	            }
+	        }
+	        
+	        async function loadPretsBloques() {
+	            try {
+	                const resp = await fetch('/api/prets/bloques', { headers: { 'Accept': 'application/json' } });
+	                const data = await resp.json();
+	                const tbody = document.getElementById('pretsBloquesTbody');
+	                const empty = document.getElementById('pretsBloquesEmpty');
+	                if (!tbody) return;
+	                const items = Array.isArray(data.items) ? data.items : [];
+	                const rows = items.filter(it => it.statut === 'BLOQUE').map(it => {
+	                    const titre = it.ressource && it.ressource.titre ? it.ressource.titre : 'Ressource';
+	                    const auteur = it.ressource && it.ressource.auteur ? it.ressource.auteur : '';
+	                    const usager = it.utilisateur ? `${it.utilisateur.prenom || ''} ${it.utilisateur.nom || ''}`.trim() : '';
+	                    const dateEmprunt = it.dateEmprunt ? new Date(it.dateEmprunt) : null;
+	                    const dateRetourPrevu = it.dateRetourPrevu ? new Date(it.dateRetourPrevu) : null;
+	                    const fmtDT = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '-';
+	                    const fmtD = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '-';
+	                    return `
+	                        <tr>
+	                            <td>
+	                                <div class="fw-semibold">${titre}</div>
+	                                <div class="text-muted small">${auteur}</div>
+	                            </td>
+	                            <td>${usager}</td>
+	                            <td>${fmtDT(dateEmprunt)}</td>
+	                            <td>${fmtD(dateRetourPrevu)}</td>
+	                            <td class="text-nowrap">
+	                                <button class="btn btn-sm btn-outline-secondary"
+	                                    data-pret-id="${it.id}"
+	                                    data-titre="${titre}"
+	                                    data-auteur="${auteur}"
+	                                    data-usager="${usager}"
+	                                    data-statut="${it.statut}"
+	                                    data-date-emprunt="${fmtDT(dateEmprunt)}"
+	                                    data-date-retour-prevu="${fmtD(dateRetourPrevu)}"
+	                                    onclick="voirPret(this)">
+	                                    <i class="bi bi-eye"></i>
+	                                </button>
+	                                <button class="btn btn-sm btn-danger" onclick="cloturerPret(${it.id})">Clôturer</button>
+	                            </td>
+	                        </tr>
+	                    `;
+	                });
+	                if (rows.length === 0) {
+	                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Aucun prêt bloqué à afficher.</td></tr>';
+	                    if (empty) empty.classList.remove('d-none');
+	                } else {
+	                    tbody.innerHTML = rows.join('');
+	                    if (empty) empty.classList.add('d-none');
+	                }
+	            } catch (e) {
+	                const tbody = document.getElementById('pretsBloquesTbody');
+	                if (tbody) {
+	                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur de chargement</td></tr>';
+	                }
+	            }
+	        }
+	        
+	        async function cloturerPret(id) {
+	            const btns = document.querySelectorAll(`button[onclick="cloturerPret(${id})"]`);
+	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+	            try {
+	                const resp = await fetch(`/api/prets/${id}/cloture`, {
+	                    method: 'PUT',
+	                    headers: { 'Accept': 'application/json' }
+	                });
+	                const data = await resp.json();
+	                if (data && data.success) {
+	                    await loadPretsBloques();
+	                } else {
+	                    btns.forEach(b => { b.disabled = false; b.textContent = 'Clôturer'; });
+	                }
+	            } catch (_) {
+	                btns.forEach(b => { b.disabled = false; b.textContent = 'Clôturer'; });
 	            }
 	        }
 	        
