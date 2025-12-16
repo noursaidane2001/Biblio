@@ -656,7 +656,7 @@
 	            const btns = document.querySelectorAll(`button[onclick="marquerNonRetourne(${id})"]`);
 	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
 	            try {
-	                const resp = await fetch(`/api/prets/${id}/en-cours`, {
+	                const resp = await fetch(`/api/prets/${id}/non-retourne`, {
 	                    method: 'PUT',
 	                    headers: { 'Accept': 'application/json' }
 	                });

@@ -110,6 +110,23 @@ public class PretService {
     }
 
     @Transactional
+    public Pret marquerNonRetourne(Long pretId) {
+        Pret pret = pretDAO.findById(pretId)
+                .orElseThrow(() -> new IllegalArgumentException("Pret introuvable"));
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate due = pret.getDateRetourPrevu();
+        if (due != null && today.isAfter(due)) {
+            pret.bloquer();
+        } else {
+            // assure l'état en cours si pas encore échue
+            if (pret.getStatut() == com.biblio.enums.StatutPret.EMPRUNTE) {
+                pret.mettreEnCours();
+            }
+        }
+        return pretDAO.save(pret);
+    }
+
+    @Transactional
     public Pret cloturer(Long pretId) {
         Pret pret = pretDAO.findById(pretId)
                 .orElseThrow(() -> new IllegalArgumentException("Pret introuvable"));
