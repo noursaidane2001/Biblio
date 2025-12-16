@@ -566,7 +566,7 @@
             const empty = document.getElementById('pretsEmpty');
             if (!tbody) return;
             const candidates = Array.isArray(prets) ? prets.filter(p => {
-                return ['RESERVE', 'EMPRUNTE', 'EN_COURS', 'RETOURNE'].includes(p.statut);
+                return ['RESERVE', 'EMPRUNTE', 'EN_COURS', 'RETOURNE', 'BLOQUE'].includes(p.statut);
             }) : [];
             if (candidates.length === 0) {
                 tbody.innerHTML = '';
@@ -584,10 +584,12 @@
                     p.statut === 'EMPRUNTE' ? 'EMPRUNTÉ' :
                     p.statut === 'EN_COURS' ? 'EN COURS' :
                     p.statut === 'RETOURNE' ? 'RETOURNÉ' :
+                    p.statut === 'BLOQUE' ? 'BLOQUÉ' :
                     p.statut === 'CLOTURE' ? 'CLÔTURÉ' : (p.statut || '-');
                 const badgeClass =
                     p.statut === 'EN_COURS' || p.statut === 'EMPRUNTE' ? 'bg-success-subtle text-success' :
                     p.statut === 'RETOURNE' ? 'bg-danger-subtle text-danger' :
+                    p.statut === 'BLOQUE' ? 'bg-danger text-white' :
                     'bg-secondary-subtle text-secondary';
                 const retardCell = retard > 0 ? `<span class="badge bg-danger-subtle text-danger">${retard} jour${retard>1?'s':''}</span>` : '-';
                 return `
