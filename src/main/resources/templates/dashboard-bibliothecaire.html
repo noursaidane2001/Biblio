@@ -455,7 +455,7 @@
 	                if (data.success) {
 	                    loadReservationsEnAttente();
 	                } else {
-	                    alert('Erreur de confirmation: ' + (data.message || ''));
+	                    alert('Erreur de confirmation: ' + (data.error || data.message || ''));
 	                }
 	            } catch (e) {
 	                alert('Erreur de confirmation: ' + e.message);
@@ -474,7 +474,7 @@
 	                if (data.success) {
 	                    loadReservationsEnAttente();
 	                } else {
-	                    alert('Erreur de rejet: ' + (data.message || ''));
+	                    alert('Erreur de rejet: ' + (data.error || data.message || ''));
 	                }
 	            } catch (e) {
 	                alert('Erreur de rejet: ' + e.message);
