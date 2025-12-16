@@ -66,6 +66,16 @@ public class PretService {
         }
     }
 
+    @Transactional
+    public void annulerPretLie(Long userId, Long ressourceId) {
+        if (userId == null || ressourceId == null) return;
+        pretDAO.findFirstByUtilisateur_IdAndRessource_IdAndStatut(userId, ressourceId, StatutPret.RESERVE)
+            .ifPresent(pret -> {
+                pret.annuler();
+                pretDAO.save(pret);
+            });
+    }
+
     public List<Pret> getPretsForUser(String email) {
         User user = userDAO.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));

@@ -211,6 +211,10 @@ public class ReservationService {
             ressourceDAO.save(r);
         }
         reservationDAO.save(reservation);
+
+        // Annuler le prêt lié si existant (status RESERVE)
+        pretService.annulerPretLie(reservation.getUsager().getId(), reservation.getRessource().getId());
+
         notifierRejet(reservation);
         pushReservationsEnAttente(reservation.getBibliotheque().getId());
         return reservation;
