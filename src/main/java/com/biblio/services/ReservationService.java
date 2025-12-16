@@ -8,6 +8,7 @@ import com.biblio.entities.Reservation;
 import com.biblio.entities.Ressource;
 import com.biblio.entities.User;
 import com.biblio.enums.StatutReservation;
+import com.biblio.enums.StatutPret;
 import com.biblio.services.PretService;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -49,6 +50,18 @@ public class ReservationService {
         Bibliotheque bibliotheque = ressource.getBibliotheque();
         if (bibliotheque == null) {
             throw new IllegalStateException("La ressource n'est associée à aucune bibliothèque");
+        }
+
+        List<StatutReservation> statutsActifsReservation = List.of(StatutReservation.EN_ATTENTE, StatutReservation.CONFIRMEE);
+        long dejaReserveMemeIsbn = (ressource.getIsbn() != null)
+                ? reservationDAO.countDuplicateIsbn(usager.getId(), ressource.getIsbn(), statutsActifsReservation)
+                : 0;
+        if (dejaReserveMemeIsbn > 0) {
+            throw new IllegalStateException("Une réservation existe déjà pour cet ISBN");
+        }
+        long reservationsActives = reservationDAO.countActivesByUsager(usager.getId(), statutsActifsReservation);
+        if (reservationsActives >= 2) {
+            throw new IllegalStateException("Limite atteinte: au maximum deux réservations actives");
         }
 
         Reservation reservation = Reservation.builder()

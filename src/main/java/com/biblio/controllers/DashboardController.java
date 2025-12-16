@@ -22,7 +22,7 @@ public class DashboardController {
             case USAGER -> "/usager/dashboard";
             case BIBLIOTHECAIRE -> "/bibliothecaire/dashboard";
             case ADMIN -> "/bibliotheque-admin/dashboard";
-            case SUPER_ADMIN -> "/admin/dashboard";
+            case SUPER_ADMIN -> "/super-admin/dashboard";
         };
     }
 

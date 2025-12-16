@@ -69,6 +69,30 @@ public class PretController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/en-cours")
+    @PreAuthorize("hasRole('BIBLIOTHECAIRE')")
+    public ResponseEntity<Map<String, Object>> pretsEnCours(@AuthenticationPrincipal UserDetails currentUser) {
+        User bibliothecaire = userDAO.findByEmail(currentUser.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
+        if (bibliothecaire.getBibliotheque() == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Pas de bibliothèque associée");
+            error.put("message", "Aucune bibliothèque n'est associée à votre compte");
+            error.put("items", List.of());
+            error.put("total", 0);
+            return ResponseEntity.ok(error);
+        }
+        Long bibliothequeId = bibliothecaire.getBibliotheque().getId();
+        List<Pret> prets = pretService.getEnCoursPourBibliotheque(bibliothequeId);
+        List<Map<String, Object>> items = prets.stream().map(this::toDto).collect(Collectors.toList());
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("items", items);
+        result.put("total", items.size());
+        return ResponseEntity.ok(result);
+    }
+
     @PutMapping("/{id}/emprunte")
     @PreAuthorize("hasAnyRole('BIBLIOTHECAIRE','ADMIN')")
     public ResponseEntity<Map<String, Object>> marquerEmprunte(@PathVariable Long id) {
@@ -88,6 +112,30 @@ public class PretController {
     public ResponseEntity<Map<String, Object>> retournerLivre(@PathVariable Long id) {
         Pret pret = pretService.retourner(id);
         return ResponseEntity.ok(Map.of("success", true, "pret", toDto(pret)));
+    }
+
+    @PutMapping("/{id}/non-retourne")
+    @PreAuthorize("hasAnyRole('BIBLIOTHECAIRE','ADMIN')")
+    public ResponseEntity<Map<String, Object>> nonRetourne(@PathVariable Long id) {
+        Pret pret = pretService.getPret(id);
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate due = pret.getDateRetourPrevu();
+        if (due != null && !today.isAfter(due)) {
+            long joursRestants = java.time.temporal.ChronoUnit.DAYS.between(today, due);
+            String toEmail = pret.getUtilisateur() != null ? pret.getUtilisateur().getEmail() : null;
+            String nom = pret.getUtilisateur() != null ? pret.getUtilisateur().getNom() : null;
+            String prenom = pret.getUtilisateur() != null ? pret.getUtilisateur().getPrenom() : null;
+            String titre = pret.getRessource() != null ? pret.getRessource().getTitre() : null;
+            String dueDisplay = due.toString();
+            if (toEmail != null) {
+                emailService.sendPretRetourReminderEmail(toEmail, nom, prenom, titre, joursRestants, dueDisplay);
+            }
+            Pret updated = pretService.mettreEnCours(id);
+            return ResponseEntity.ok(Map.of("success", true, "pret", toDto(updated)));
+        } else {
+            Pret updated = pretService.marquerNonRetourne(id);
+            return ResponseEntity.ok(Map.of("success", true, "pret", toDto(updated)));
+        }
     }
 
     @PutMapping("/{id}/cloture")
