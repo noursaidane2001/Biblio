@@ -323,7 +323,10 @@
                 });
                 reservationsUsagerList = list;
                 renderCatalogue();
-                renderReservationsListe(list);
+                // Filtrer pour ne pas afficher les réservations confirmées ni annulées dans le bloc "Mes réservations"
+                // Seules les réservations EN_ATTENTE doivent être affichées (les CONFIRMEE sont dans les prêts, les ANNULEE ne s'affichent pas)
+                const listForDisplay = list.filter(r => r.statut === 'EN_ATTENTE');
+                renderReservationsListe(listForDisplay);
                 mettreAJourCompteurs();
             } catch (e) {
                 console.warn('Impossible de charger les réservations usager', e);
@@ -469,7 +472,9 @@
                 ? reservationsUsagerList.filter(r => ['EN_ATTENTE','CONFIRMEE'].includes(r.statut)).length
                 : 0;
             const limiteAtteinte = actifsReservations >= 2;
-            const disabled = (disponibles === 0 && !statutReservation) || dejaReserveMemeIsbn || limiteAtteinte;
+            // Modifié pour permettre la réservation même si indisponible (demande usager)
+            // Et désactiver si déjà réservé (par statut ou ISBN) ou limite atteinte
+            const disabled = (statutReservation) || dejaReserveMemeIsbn || limiteAtteinte;
             let badgeReservation = '';
             if (statutReservation) {
                 badgeReservation = `<span class="badge bg-info-subtle text-info">${statutReservation.replaceAll('_', ' ')}</span>`;
@@ -567,6 +572,7 @@
             const empty = document.getElementById('pretsEmpty');
             if (!tbody) return;
             const candidates = Array.isArray(prets) ? prets.filter(p => {
+                // Exclure les prêts annulés de l'affichage
                 return ['RESERVE', 'EMPRUNTE', 'EN_COURS', 'RETOURNE', 'BLOQUE'].includes(p.statut);
             }) : [];
             if (candidates.length === 0) {
