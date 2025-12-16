@@ -76,6 +76,10 @@ public class PretService {
         return pretDAO.findByBibliothequeAndStatut(bibliothequeId, StatutPret.EMPRUNTE);
     }
 
+    public List<Pret> getEnCoursPourBibliotheque(Long bibliothequeId) {
+        return pretDAO.findByBibliothequeAndStatut(bibliothequeId, StatutPret.EN_COURS);
+    }
+
     @Transactional
     public Pret marquerEmprunte(Long pretId) {
         Pret pret = pretDAO.findById(pretId)
