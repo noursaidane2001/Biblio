@@ -247,7 +247,7 @@
 	                            <a th:href="@{/user/profile}" class="btn btn-outline-info">
 	                                <i class="bi bi-person-gear me-2"></i>Gérer mon profil
 	                            </a>
-	                            <a th:href="@{/}" class="btn btn-outline-secondary">
+	                            <a th:href="@{/bibliothecaire/dashboard}" class="btn btn-outline-secondary">
 	                                <i class="bi bi-house me-2"></i>Retour à l'accueil
 	                            </a>
 	                            <form th:action="@{/logout}" method="post" style="display: inline;">
@@ -292,7 +292,6 @@
 	    
 	    <script th:inline="javascript">
 	        const BIB_ID = [[${user.bibliotheque != null ? user.bibliotheque.id : null}]];
-	        
 	        async function loadPretsEmprunte() {
 	            try {
 	                const resp = await fetch('/api/prets/a-retirer', { headers: { 'Accept': 'application/json' } });
