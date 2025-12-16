@@ -157,8 +157,8 @@ public class Pret {
     }
 
     public void cloturer() {
-        if (statut != StatutPret.RETOURNE) {
-            throw new IllegalStateException("Seul un prêt retourné peut être clôturé");
+        if (statut != StatutPret.RETOURNE && statut != StatutPret.BLOQUE) {
+            throw new IllegalStateException("Seuls un prêt retourné ou bloqué peuvent être clôturés");
         }
         this.statut = StatutPret.CLOTURE;
     }

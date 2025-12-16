@@ -93,6 +93,30 @@ public class PretController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/bloques")
+    @PreAuthorize("hasRole('BIBLIOTHECAIRE')")
+    public ResponseEntity<Map<String, Object>> pretsBloques(@AuthenticationPrincipal UserDetails currentUser) {
+        User bibliothecaire = userDAO.findByEmail(currentUser.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé"));
+        if (bibliothecaire.getBibliotheque() == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Pas de bibliothèque associée");
+            error.put("message", "Aucune bibliothèque n'est associée à votre compte");
+            error.put("items", List.of());
+            error.put("total", 0);
+            return ResponseEntity.ok(error);
+        }
+        Long bibliothequeId = bibliothecaire.getBibliotheque().getId();
+        List<Pret> prets = pretService.getBloquePourBibliotheque(bibliothequeId);
+        List<Map<String, Object>> items = prets.stream().map(this::toDto).collect(Collectors.toList());
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("items", items);
+        result.put("total", items.size());
+        return ResponseEntity.ok(result);
+    }
+
     @PutMapping("/{id}/emprunte")
     @PreAuthorize("hasAnyRole('BIBLIOTHECAIRE','ADMIN')")
     public ResponseEntity<Map<String, Object>> marquerEmprunte(@PathVariable Long id) {
