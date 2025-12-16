@@ -304,6 +304,12 @@
             }
         }
 
+        // Fonction de filtrage: afficher uniquement les réservations EN_ATTENTE
+        function filtrerReservations(list) {
+            if (!Array.isArray(list)) return [];
+            return list.filter(r => r.statut === 'EN_ATTENTE');
+        }
+
         async function chargerReservationsUtilisateur() {
             try {
                 const resp = await fetch('/api/reservations/mes');
@@ -317,13 +323,16 @@
                     if (r.ressource && r.ressource.id) {
                         reservationsParRessource[r.ressource.id] = statut;
                     }
-                    if (r.ressource && r.ressource.isbn && ['EN_ATTENTE','CONFIRMEE'].includes(statut)) {
+                    if (r.ressource && r.ressource.isbn && statut === 'EN_ATTENTE') {
                         reservationsParIsbn[r.ressource.isbn] = true;
                     }
                 });
                 reservationsUsagerList = list;
                 renderCatalogue();
-                renderReservationsListe(list);
+                
+                // Filtrage pour l'affichage liste
+                const listForDisplay = filtrerReservations(list);
+                renderReservationsListe(listForDisplay);
                 mettreAJourCompteurs();
             } catch (e) {
                 console.warn('Impossible de charger les réservations usager', e);
@@ -464,12 +473,19 @@
             const cover = ressource.imageCouverture || 'https://illustrations.popsy.co/gray/bookshelf.svg';
             const disponibles = ressource.exemplairesDisponibles ?? 0;
             const statutReservation = reservationsParRessource[ressource.id];
+            const isActiveReservation = statutReservation === 'EN_ATTENTE';
+            
             const dejaReserveMemeIsbn = !!(ressource.isbn && reservationsParIsbn[ressource.isbn]);
             const actifsReservations = Array.isArray(reservationsUsagerList)
-                ? reservationsUsagerList.filter(r => ['EN_ATTENTE','CONFIRMEE'].includes(r.statut)).length
+                ? reservationsUsagerList.filter(r => r.statut === 'EN_ATTENTE').length
                 : 0;
             const limiteAtteinte = actifsReservations >= 2;
-            const disabled = (disponibles === 0 && !statutReservation) || dejaReserveMemeIsbn || limiteAtteinte;
+            
+            // Le bouton n'est désactivé que si la réservation EN_ATTENTE existe
+            // ou si l'ISBN est déjà réservé en attente.
+            // On laisse le bouton actif même si la limite est atteinte pour que le backend renvoie l'erreur explicite.
+            const disabled = isActiveReservation || dejaReserveMemeIsbn;
+
             let badgeReservation = '';
             if (statutReservation) {
                 badgeReservation = `<span class="badge bg-info-subtle text-info">${statutReservation.replaceAll('_', ' ')}</span>`;
@@ -495,7 +511,7 @@
                                     ${disponibles > 0 ? `${disponibles} disponibles` : 'Indisponible'}
                                 </span>
                                 <button class="btn btn-sm btn-outline-primary btn-reserver" data-ressource-id="${ressource.id}" ${disabled ? 'disabled' : ''}>
-                                    <i class="bi bi-bookmark-plus me-1"></i>${statutReservation ? 'Réservé' : 'Réserver'}
+                                    <i class="bi bi-bookmark-plus me-1"></i>${isActiveReservation ? 'Réservé' : 'Réserver'}
                                 </button>
                             </div>
                         </div>
@@ -567,6 +583,7 @@
             const empty = document.getElementById('pretsEmpty');
             if (!tbody) return;
             const candidates = Array.isArray(prets) ? prets.filter(p => {
+                // Exclure les prêts annulés de l'affichage
                 return ['RESERVE', 'EMPRUNTE', 'EN_COURS', 'RETOURNE', 'BLOQUE'].includes(p.statut);
             }) : [];
             if (candidates.length === 0) {
@@ -645,16 +662,25 @@
             const retardsEl = document.getElementById('retardsCount');
             const resList = Array.isArray(reservationsUsagerList) ? reservationsUsagerList : [];
             const pretsList = Array.isArray(pretsUsagerList) ? pretsUsagerList : [];
-            const actifs = pretsList.filter(p => !['RETOURNE','CLOTURE'].includes(p.statut)).length;
+
+            // Prêts actifs: Exclut RETOURNE, CLOTURE et ANNULE
+            const actifs = pretsList.filter(p => !['RETOURNE','CLOTURE','ANNULE'].includes(p.statut)).length;
+
+            // Retards: Exclut RETOURNE, CLOTURE et ANNULE
             const retards = pretsList.reduce((acc, p) => {
+                if (['RETOURNE','CLOTURE','ANNULE'].includes(p.statut)) return acc;
                 if (typeof p.retardJours === 'number') {
                     return acc + (p.retardJours > 0 ? 1 : 0);
                 }
                 const due = parseDate(p.dateRetourPrevu) || ajouterJours(parseDate(p.dateReservation), DUREE_EMPRUNT_JOURS);
                 return acc + (calculRetard(due) > 0 ? 1 : 0);
             }, 0);
+
+            // Réservations en attente uniquement
+            const reservations = resList.filter(r => r.statut === 'EN_ATTENTE').length;
+
             if (actifsEl) actifsEl.textContent = String(actifs);
-            if (reservationsEl) reservationsEl.textContent = String(resList.length);
+            if (reservationsEl) reservationsEl.textContent = String(reservations);
             if (retardsEl) retardsEl.textContent = String(retards);
         }
 
