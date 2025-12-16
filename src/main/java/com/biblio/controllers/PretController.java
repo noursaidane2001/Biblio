@@ -145,6 +145,27 @@ public class PretController {
         return ResponseEntity.ok(Map.of("success", true, "pret", toDto(pret)));
     }
 
+    @PutMapping("/{id}/feedback")
+    @PreAuthorize("hasRole('USAGER')")
+    public ResponseEntity<Map<String, Object>> ajouterFeedback(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails currentUser,
+            @RequestBody Map<String, Object> payload
+    ) {
+        String feedback = payload != null ? (String) payload.get("feedback") : null;
+        Integer note = null;
+        Object noteObj = payload != null ? payload.get("note") : null;
+        if (noteObj instanceof Number) {
+            note = ((Number) noteObj).intValue();
+        } else if (noteObj instanceof String) {
+            try {
+                note = Integer.parseInt((String) noteObj);
+            } catch (NumberFormatException ignored) {}
+        }
+        Pret updated = pretService.ajouterFeedbackUsager(id, feedback, note, currentUser.getUsername());
+        return ResponseEntity.ok(Map.of("success", true, "pret", toDto(updated)));
+    }
+
     @PostMapping("/{id}/relancer")
     @PreAuthorize("hasAnyRole('BIBLIOTHECAIRE','ADMIN')")
     public ResponseEntity<Map<String, Object>> relancerRetrait(@PathVariable Long id) {
@@ -191,6 +212,8 @@ public class PretController {
         map.put("prolongations", p.getProlongations());
         map.put("penaliteRetard", p.getPenaliteRetard());
         map.put("retardJours", p.getJoursRetard());
+        map.put("feedbackUsager", p.getFeedbackUsager());
+        map.put("noteUsager", p.getNoteUsager());
         if (p.getRessource() != null) {
             map.put("ressource", Map.of(
                     "id", p.getRessource().getId(),

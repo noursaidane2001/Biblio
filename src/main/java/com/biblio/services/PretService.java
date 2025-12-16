@@ -141,4 +141,23 @@ public class PretService {
         pret.annuler();
         return pretDAO.save(pret);
     }
+
+    @Transactional
+    public Pret ajouterFeedbackUsager(Long pretId, String feedback, Integer note, String utilisateurEmail) {
+        Pret pret = pretDAO.findById(pretId)
+                .orElseThrow(() -> new IllegalArgumentException("Pret introuvable"));
+        User user = userDAO.findByEmail(utilisateurEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
+        if (pret.getUtilisateur() == null || !pret.getUtilisateur().getId().equals(user.getId())) {
+            throw new IllegalStateException("Ce prêt n'appartient pas à l'utilisateur connecté");
+        }
+        pret.setFeedbackUsager(feedback);
+        if (note != null) {
+            pret.setNoteUsager(note);
+        }
+        if (pret.getStatut() == com.biblio.enums.StatutPret.RETOURNE) {
+            pret.cloturer();
+        }
+        return pretDAO.save(pret);
+    }
 }
