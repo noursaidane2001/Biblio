@@ -28,4 +28,15 @@ public class UsagerMvcController {
         model.addAttribute("user", user);
         return "dashboard-usager";
     }
+    
+    @GetMapping("/historique")
+    public String historique(@AuthenticationPrincipal UserDetails userDetails, Model model) {
+        if (userDetails == null) {
+            return "redirect:/login";
+        }
+        User user = userDAO.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        model.addAttribute("user", user);
+        return "historique-usager";
+    }
 }
