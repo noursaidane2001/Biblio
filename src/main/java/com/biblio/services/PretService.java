@@ -17,11 +17,14 @@ public class PretService {
     private final PretDAO pretDAO;
     private final UserDAO userDAO;
     private final ReservationService reservationService;
+    private final com.biblio.dao.RessourceDAO ressourceDAO;
 
-    public PretService(PretDAO pretDAO, UserDAO userDAO, @org.springframework.context.annotation.Lazy ReservationService reservationService) {
+    public PretService(PretDAO pretDAO, UserDAO userDAO, @org.springframework.context.annotation.Lazy ReservationService reservationService,
+                       com.biblio.dao.RessourceDAO ressourceDAO) {
         this.pretDAO = pretDAO;
         this.userDAO = userDAO;
         this.reservationService = reservationService;
+        this.ressourceDAO = ressourceDAO;
     }
 
     @Transactional
@@ -123,7 +126,15 @@ public class PretService {
         Pret pret = pretDAO.findById(pretId)
                 .orElseThrow(() -> new IllegalArgumentException("Pret introuvable"));
         pret.retourner();
-        return pretDAO.save(pret);
+        Pret saved = pretDAO.save(pret);
+        // Une fois le prêt retourné, l'exemplaire redevient disponible
+        if (saved.getRessource() != null) {
+            var r = saved.getRessource();
+            Integer dispo = r.getExemplairesDisponibles();
+            r.setExemplairesDisponibles((dispo == null ? 0 : dispo) + 1);
+            ressourceDAO.save(r);
+        }
+        return saved;
     }
 
     @Transactional
