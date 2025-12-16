@@ -160,6 +160,36 @@
 	                </div>
 	            </div>
 	        </div>
+	        <div class="card shadow-lg border-0 mb-4">
+	            <div class="card-header bg-primary text-white">
+	                <h5 class="mb-0">
+	                    <i class="bi bi-eye me-2"></i>Prêts en cours
+	                </h5>
+	            </div>
+	            <div class="card-body">
+	                <div class="table-responsive">
+	                    <table class="table table-hover align-middle">
+	                        <thead>
+	                            <tr>
+	                                <th>Ressource</th>
+	                                <th>Usager</th>
+	                                <th>Date emprunt</th>
+	                                <th>Retour prévu</th>
+	                                <th>Actions</th>
+	                            </tr>
+	                        </thead>
+	                        <tbody id="pretsEnCoursTbody">
+	                            <tr>
+	                                <td colspan="5" class="text-center text-muted">Chargement...</td>
+	                            </tr>
+	                        </tbody>
+	                    </table>
+	                </div>
+	                <div id="pretsEnCoursEmpty" class="alert alert-info d-none">
+	                    <i class="bi bi-info-circle me-2"></i>Aucun prêt en cours à afficher.
+	                </div>
+	            </div>
+	        </div>
 	
 	        <!-- Informations du compte -->
 	        <div class="row g-4">
@@ -504,6 +534,7 @@
 	            loadReservationsEnAttente();
 	            connectReservationsWS();
 	            loadPretsEmprunte();
+	            loadPretsEnCours();
 	            
 	            const toastElements = document.querySelectorAll('.toast');
 	            if (toastElements.length > 0) {
@@ -535,6 +566,139 @@
 	                    <ul class="list-group list-group-flush" id="reservationsList">
 	                        <li class="list-group-item text-muted">Chargement...</li>
 	                    </ul>
+	                </div>
+	                <div class="modal-footer">
+	                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+	                </div>
+	            </div>
+	        </div>
+	    </div>
+	    
+	    <script th:inline="javascript">
+	        async function loadPretsEnCours() {
+	            try {
+	                const resp = await fetch('/api/prets/en-cours', { headers: { 'Accept': 'application/json' } });
+	                const data = await resp.json();
+	                const tbody = document.getElementById('pretsEnCoursTbody');
+	                const empty = document.getElementById('pretsEnCoursEmpty');
+	                if (!tbody) return;
+	                const items = Array.isArray(data.items) ? data.items : [];
+	                const rows = items.filter(it => it.statut === 'EN_COURS').map(it => {
+	                    const titre = it.ressource && it.ressource.titre ? it.ressource.titre : 'Ressource';
+	                    const auteur = it.ressource && it.ressource.auteur ? it.ressource.auteur : '';
+	                    const usager = it.utilisateur ? `${it.utilisateur.prenom || ''} ${it.utilisateur.nom || ''}`.trim() : '';
+	                    const dateEmprunt = it.dateEmprunt ? new Date(it.dateEmprunt) : null;
+	                    const dateRetourPrevu = it.dateRetourPrevu ? new Date(it.dateRetourPrevu) : null;
+	                    const fmtDT = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '-';
+	                    const fmtD = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '-';
+	                    return `
+	                        <tr>
+	                            <td>
+	                                <div class="fw-semibold">${titre}</div>
+	                                <div class="text-muted small">${auteur}</div>
+	                            </td>
+	                            <td>${usager}</td>
+	                            <td>${fmtDT(dateEmprunt)}</td>
+	                            <td>${fmtD(dateRetourPrevu)}</td>
+	                            <td class="text-nowrap">
+	                                <button class="btn btn-sm btn-outline-secondary"
+	                                    data-pret-id="${it.id}"
+	                                    data-titre="${titre}"
+	                                    data-auteur="${auteur}"
+	                                    data-usager="${usager}"
+	                                    data-statut="${it.statut}"
+	                                    data-date-emprunt="${fmtDT(dateEmprunt)}"
+	                                    data-date-retour-prevu="${fmtD(dateRetourPrevu)}"
+	                                    onclick="voirPret(this)">
+	                                    <i class="bi bi-eye"></i>
+	                                </button>
+	                                <button class="btn btn-sm btn-success" onclick="retournerPret(${it.id})">Retourné</button>
+	                                <button class="btn btn-sm btn-outline-warning" onclick="marquerNonRetourne(${it.id})">Non retourné</button>
+	                            </td>
+	                        </tr>
+	                    `;
+	                });
+	                if (rows.length === 0) {
+	                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Aucun prêt en cours à afficher.</td></tr>';
+	                    if (empty) empty.classList.remove('d-none');
+	                } else {
+	                    tbody.innerHTML = rows.join('');
+	                    if (empty) empty.classList.add('d-none');
+	                }
+	            } catch (e) {
+	                const tbody = document.getElementById('pretsEnCoursTbody');
+	                if (tbody) {
+	                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur de chargement</td></tr>';
+	                }
+	            }
+	        }
+	        
+	        async function retournerPret(id) {
+	            const btns = document.querySelectorAll(`button[onclick="retournerPret(${id})"]`);
+	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+	            try {
+	                const resp = await fetch(`/api/prets/${id}/retour`, {
+	                    method: 'PUT',
+	                    headers: { 'Accept': 'application/json' }
+	                });
+	                const data = await resp.json();
+	                if (data && data.success) {
+	                    await loadPretsEnCours();
+	                } else {
+	                    btns.forEach(b => { b.disabled = false; b.textContent = 'Retourné'; });
+	                }
+	            } catch (_) {
+	                btns.forEach(b => { b.disabled = false; b.textContent = 'Retourné'; });
+	            }
+	        }
+	        
+	        async function marquerNonRetourne(id) {
+	            const btns = document.querySelectorAll(`button[onclick="marquerNonRetourne(${id})"]`);
+	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+	            try {
+	                const resp = await fetch(`/api/prets/${id}/en-cours`, {
+	                    method: 'PUT',
+	                    headers: { 'Accept': 'application/json' }
+	                });
+	                const data = await resp.json();
+	                if (data && data.success) {
+	                    await loadPretsEnCours();
+	                } else {
+	                    btns.forEach(b => { b.disabled = false; b.textContent = 'Non retourné'; });
+	                }
+	            } catch (_) {
+	                btns.forEach(b => { b.disabled = false; b.textContent = 'Non retourné'; });
+	            }
+	        }
+	        
+	        function voirPret(el) {
+	            const modalEl = document.getElementById('pretDetailModal');
+	            if (!modalEl) return;
+	            modalEl.querySelector('[data-field="titre"]').textContent = el.getAttribute('data-titre') || '';
+	            modalEl.querySelector('[data-field="auteur"]').textContent = el.getAttribute('data-auteur') || '';
+	            modalEl.querySelector('[data-field="usager"]').textContent = el.getAttribute('data-usager') || '';
+	            modalEl.querySelector('[data-field="statut"]').textContent = el.getAttribute('data-statut') || '';
+	            modalEl.querySelector('[data-field="dateEmprunt"]').textContent = el.getAttribute('data-date-emprunt') || '';
+	            modalEl.querySelector('[data-field="dateRetourPrevu"]').textContent = el.getAttribute('data-date-retour-prevu') || '';
+	            const modal = new bootstrap.Modal(modalEl);
+	            modal.show();
+	        }
+	    </script>
+	    
+	    <div class="modal fade" id="pretDetailModal" tabindex="-1" aria-labelledby="pretDetailModalLabel" aria-hidden="true">
+	        <div class="modal-dialog">
+	            <div class="modal-content">
+	                <div class="modal-header">
+	                    <h5 class="modal-title" id="pretDetailModalLabel"><i class="bi bi-eye me-2"></i>Détails du prêt</h5>
+	                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+	                </div>
+	                <div class="modal-body">
+	                    <div class="mb-2"><strong>Ressource:</strong> <span data-field="titre"></span></div>
+	                    <div class="mb-2"><strong>Auteur:</strong> <span data-field="auteur"></span></div>
+	                    <div class="mb-2"><strong>Usager:</strong> <span data-field="usager"></span></div>
+	                    <div class="mb-2"><strong>Statut:</strong> <span data-field="statut"></span></div>
+	                    <div class="mb-2"><strong>Date emprunt:</strong> <span data-field="dateEmprunt"></span></div>
+	                    <div class="mb-2"><strong>Retour prévu:</strong> <span data-field="dateRetourPrevu"></span></div>
 	                </div>
 	                <div class="modal-footer">
 	                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
