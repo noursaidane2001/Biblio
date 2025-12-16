@@ -264,6 +264,7 @@
         let reservationsParRessource = {};
         let reservationsUsagerList = [];
         let pretsUsagerList = [];
+        let reservationsParTitreCategorie = {};
 
         document.addEventListener('DOMContentLoaded', async function() {
             await chargerCatalogue();
@@ -309,9 +310,15 @@
                 const data = await resp.json();
                 const list = Array.isArray(data.reservations) ? data.reservations : (data.ressources || []);
                 reservationsParRessource = {};
+                reservationsParTitreCategorie = {};
                 list.forEach(r => {
+                    const statut = r.statut || 'EN_ATTENTE';
                     if (r.ressource && r.ressource.id) {
-                        reservationsParRessource[r.ressource.id] = r.statut || 'EN_ATTENTE';
+                        reservationsParRessource[r.ressource.id] = statut;
+                    }
+                    if (r.ressource && r.ressource.titre && r.ressource.categorie && ['EN_ATTENTE','CONFIRMEE'].includes(statut)) {
+                        const key = normaliserTexte(r.ressource.titre) + '|' + r.ressource.categorie;
+                        reservationsParTitreCategorie[key] = true;
                     }
                 });
                 reservationsUsagerList = list;
@@ -457,7 +464,16 @@
             const cover = ressource.imageCouverture || 'https://illustrations.popsy.co/gray/bookshelf.svg';
             const disponibles = ressource.exemplairesDisponibles ?? 0;
             const statutReservation = reservationsParRessource[ressource.id];
-            const disabled = disponibles === 0 && !statutReservation;
+            const keyTitreCategorie = normaliserTexte(ressource.titre) + '|' + ressource.categorie;
+            const dejaReserveMemeNomCat = !!reservationsParTitreCategorie[keyTitreCategorie];
+            const actifsPrets = Array.isArray(pretsUsagerList)
+                ? pretsUsagerList.filter(p => ['RESERVE','EN_COURS','EMPRUNTE'].includes(p.statut)).length
+                : 0;
+            const actifsReservations = Array.isArray(reservationsUsagerList)
+                ? reservationsUsagerList.filter(r => ['EN_ATTENTE','CONFIRMEE'].includes(r.statut)).length
+                : 0;
+            const limiteAtteinte = (actifsPrets + actifsReservations) >= 2;
+            const disabled = (disponibles === 0 && !statutReservation) || dejaReserveMemeNomCat || limiteAtteinte;
             let badgeReservation = '';
             if (statutReservation) {
                 badgeReservation = `<span class="badge bg-info-subtle text-info">${statutReservation.replaceAll('_', ' ')}</span>`;
