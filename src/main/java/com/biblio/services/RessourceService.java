@@ -54,6 +54,14 @@ public class RessourceService {
             throw new IllegalArgumentException("Le bibliothécaire n'est associé à aucune bibliothèque");
         }
         
+        // Vérifier la capacité de la bibliothèque
+        if (bibliotheque.getCapaciteStock() != null) {
+            Integer currentStock = ressourceDAO.sumNombreExemplairesByBibliothequeId(bibliotheque.getId());
+            if (currentStock + nombreExemplaires > bibliotheque.getCapaciteStock()) {
+                throw new IllegalArgumentException("L'ajout de ces exemplaires dépasse la capacité de stockage de la bibliothèque (" + bibliotheque.getCapaciteStock() + ")");
+            }
+        }
+        
         // Vérifier l'ISBN si fourni
         if (isbn != null && !isbn.trim().isEmpty()) {
             if (ressourceDAO.existsByIsbn(isbn)) {
