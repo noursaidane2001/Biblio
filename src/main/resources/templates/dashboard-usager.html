@@ -105,6 +105,7 @@
                                         <th>Statut</th>
                                         <th>Retour prévu</th>
                                         <th>Retard</th>
+                                        <th>Avis</th>
                                     </tr>
                                 </thead>
                                 <tbody id="pretsTbody"></tbody>
@@ -592,6 +593,9 @@
                     p.statut === 'BLOQUE' ? 'bg-danger text-white' :
                     'bg-secondary-subtle text-secondary';
                 const retardCell = retard > 0 ? `<span class="badge bg-danger-subtle text-danger">${retard} jour${retard>1?'s':''}</span>` : '-';
+                const avisCell = (p.statut === 'RETOURNE' && !p.feedbackUsager)
+                    ? `<button class="btn btn-sm btn-outline-primary" onclick="ouvrirFeedbackPret(${p.id})"><i class='bi bi-chat-dots me-1'></i>Donner un avis</button>`
+                    : (p.feedbackUsager ? `<span class="text-muted small">Avis enregistré${p.noteUsager ? ' ('+p.noteUsager+'/5)' : ''}</span>` : '-');
                 return `
                     <tr>
                         <td>
@@ -601,11 +605,40 @@
                         <td><span class="badge ${badgeClass}">${label}</span></td>
                         <td class="fw-semibold">${formatDateFr(due)}</td>
                         <td>${retardCell}</td>
+                        <td>${avisCell}</td>
                     </tr>
                 `;
             }).join('');
         }
 
+        async function ouvrirFeedbackPret(pretId) {
+            const pret = (Array.isArray(pretsUsagerList) ? pretsUsagerList : []).find(x => String(x.id) === String(pretId));
+            const titre = pret?.ressource?.titre || '';
+            const feedback = window.prompt(`Votre avis sur: ${titre}\n(200 caractères max)`);
+            if (feedback === null) return;
+            const noteStr = window.prompt('Notez cette ressource (1 à 5)');
+            let note = null;
+            if (noteStr !== null && noteStr.trim() !== '') {
+                const n = parseInt(noteStr.trim(), 10);
+                if (!isNaN(n) && n >= 1 && n <= 5) {
+                    note = n;
+                }
+            }
+            try {
+                const resp = await fetch(`/api/prets/${pretId}/feedback`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ feedback, note })
+                });
+                if (!resp.ok) throw new Error('Enregistrement impossible');
+                await chargerPretsUtilisateur();
+                const toastEvent = new CustomEvent('show-toast', { detail: { type: 'success', message: 'Avis enregistré. Merci!' }});
+                document.dispatchEvent(toastEvent);
+            } catch (e) {
+                const toastEvent = new CustomEvent('show-toast', { detail: { type: 'danger', message: 'Erreur lors de l\'enregistrement de l\'avis.' }});
+                document.dispatchEvent(toastEvent);
+            }
+        }
         function mettreAJourCompteurs() {
             const actifsEl = document.getElementById('actifsCount');
             const reservationsEl = document.getElementById('reservationsCount');
