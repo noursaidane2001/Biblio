@@ -1,6 +1,7 @@
 package com.biblio.services;
 
 import com.biblio.dao.ReservationDAO;
+import com.biblio.dao.PretDAO;
 import com.biblio.dao.RessourceDAO;
 import com.biblio.dao.UserDAO;
 import com.biblio.entities.Bibliotheque;
@@ -29,16 +30,18 @@ public class ReservationService {
     private final EmailService emailService;
     private final PretService pretService;
     private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+    private final PretDAO pretDAO;
 
     public ReservationService(ReservationDAO reservationDAO, RessourceDAO ressourceDAO, UserDAO userDAO, EmailService emailService,
                               org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate,
-                              PretService pretService) {
+                              PretService pretService, PretDAO pretDAO) {
         this.reservationDAO = reservationDAO;
         this.ressourceDAO = ressourceDAO;
         this.userDAO = userDAO;
         this.emailService = emailService;
         this.messagingTemplate = messagingTemplate;
         this.pretService = pretService;
+        this.pretDAO = pretDAO;
     }
 
     @Transactional
@@ -52,6 +55,10 @@ public class ReservationService {
             throw new IllegalStateException("La ressource n'est associée à aucune bibliothèque");
         }
 
+        long pretsBloques = pretDAO.countActifsByUtilisateur(usager.getId(), java.util.List.of(StatutPret.BLOQUE));
+        if (pretsBloques > 0) {
+            throw new IllegalStateException("Vous avez un prêt bloqué. Impossible de faire une nouvelle réservation");
+        }
         List<StatutReservation> statutsActifsReservation = List.of(StatutReservation.EN_ATTENTE);
         long dejaReserveMemeIsbn = (ressource.getIsbn() != null)
                 ? reservationDAO.countDuplicateIsbn(usager.getId(), ressource.getIsbn(), statutsActifsReservation)
