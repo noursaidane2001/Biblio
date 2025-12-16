@@ -16,10 +16,12 @@ import java.util.Optional;
 public class PretService {
     private final PretDAO pretDAO;
     private final UserDAO userDAO;
+    private final ReservationService reservationService;
 
-    public PretService(PretDAO pretDAO, UserDAO userDAO) {
+    public PretService(PretDAO pretDAO, UserDAO userDAO, @org.springframework.context.annotation.Lazy ReservationService reservationService) {
         this.pretDAO = pretDAO;
         this.userDAO = userDAO;
+        this.reservationService = reservationService;
     }
 
     @Transactional
@@ -69,11 +71,16 @@ public class PretService {
     @Transactional
     public void annulerPretLie(Long userId, Long ressourceId) {
         if (userId == null || ressourceId == null) return;
-        pretDAO.findFirstByUtilisateur_IdAndRessource_IdAndStatut(userId, ressourceId, StatutPret.RESERVE)
-            .ifPresent(pret -> {
-                pret.annuler();
-                pretDAO.save(pret);
-            });
+        // On annule le prêt s'il est à l'état RESERVE ou EMPRUNTE (cas d'une réservation confirmée mais pas encore récupérée/finalisée côté flux physique complet si on considère CONFIRMEE comme étape intermédiaire)
+        // Note: Si la réservation est CONFIRMEE, le prêt est passé à EMPRUNTE dans confirmerReservation.
+        List<StatutPret> cibles = List.of(StatutPret.RESERVE, StatutPret.EMPRUNTE);
+        for (StatutPret s : cibles) {
+            pretDAO.findFirstByUtilisateur_IdAndRessource_IdAndStatut(userId, ressourceId, s)
+                .ifPresent(pret -> {
+                    pret.annuler();
+                    pretDAO.save(pret);
+                });
+        }
     }
 
     public List<Pret> getPretsForUser(String email) {
@@ -149,7 +156,14 @@ public class PretService {
         Pret pret = pretDAO.findById(pretId)
                 .orElseThrow(() -> new IllegalArgumentException("Pret introuvable"));
         pret.annuler();
-        return pretDAO.save(pret);
+        Pret saved = pretDAO.save(pret);
+        
+        // Sync: Annuler la réservation liée si elle est confirmée/en attente
+        if (pret.getUtilisateur() != null && pret.getRessource() != null) {
+            reservationService.annulerReservationLiee(pret.getUtilisateur().getId(), pret.getRessource().getId());
+        }
+        
+        return saved;
     }
 
     @Transactional

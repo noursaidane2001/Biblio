@@ -98,61 +98,10 @@
 }
 
 /* Amélioration des formulaires */
-.form-control-lg:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+.border-dashed {
+    border-style: dashed !important;
 }
 
-/* Animation pour les alertes */
-.alert {
-    animation: slideIn 0.3s ease-out;
+.cursor-pointer {
+    cursor: pointer;
 }
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateX(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-/* Amélioration du footer */
-footer {
-    margin-top: auto;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .display-4 {
-        font-size: 2rem;
-    }
-    
-    .display-5 {
-        font-size: 1.75rem;
-    }
-    
-    .card-body {
-        padding: 1.5rem !important;
-    }
-}
-
-/* Smooth scroll */
-html {
-    scroll-behavior: smooth;
-}
-
-/* Selection color */
-::selection {
-    background: #667eea;
-    color: white;
-}
-
-/* Focus visible for accessibility */
-*:focus-visible {
-    outline: 2px solid #667eea;
-    outline-offset: 2px;
-}
-

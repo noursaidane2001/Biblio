@@ -55,4 +55,6 @@ public interface ReservationDAO extends JpaRepository<Reservation, Long> {
     long countDuplicateIsbn(@Param("usagerId") Long usagerId,
                             @Param("isbn") String isbn,
                             @Param("statuts") List<StatutReservation> statuts);
+
+    boolean existsByUsagerIdAndRessourceIdAndStatutIn(Long usagerId, Long ressourceId, List<StatutReservation> statuts);
 }
