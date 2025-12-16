@@ -76,6 +76,10 @@ public class PretService {
         return pretDAO.findByBibliothequeAndStatut(bibliothequeId, StatutPret.EMPRUNTE);
     }
 
+    public List<Pret> getEnCoursPourBibliotheque(Long bibliothequeId) {
+        return pretDAO.findByBibliothequeAndStatut(bibliothequeId, StatutPret.EN_COURS);
+    }
+
     @Transactional
     public Pret marquerEmprunte(Long pretId) {
         Pret pret = pretDAO.findById(pretId)
@@ -102,6 +106,23 @@ public class PretService {
         Pret pret = pretDAO.findById(pretId)
                 .orElseThrow(() -> new IllegalArgumentException("Pret introuvable"));
         pret.retourner();
+        return pretDAO.save(pret);
+    }
+
+    @Transactional
+    public Pret marquerNonRetourne(Long pretId) {
+        Pret pret = pretDAO.findById(pretId)
+                .orElseThrow(() -> new IllegalArgumentException("Pret introuvable"));
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate due = pret.getDateRetourPrevu();
+        if (due != null && today.isAfter(due)) {
+            pret.bloquer();
+        } else {
+            // assure l'état en cours si pas encore échue
+            if (pret.getStatut() == com.biblio.enums.StatutPret.EMPRUNTE) {
+                pret.mettreEnCours();
+            }
+        }
         return pretDAO.save(pret);
     }
 

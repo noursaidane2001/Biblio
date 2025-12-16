@@ -148,7 +148,7 @@ public class Pret {
     }
 
     public void retourner() {
-        if (statut != StatutPret.EN_COURS && statut != StatutPret.EMPRUNTE) {
+        if (statut != StatutPret.EN_COURS && statut != StatutPret.EMPRUNTE && statut != StatutPret.BLOQUE) {
             throw new IllegalStateException("Ce prêt ne peut pas être retourné dans son état actuel");
         }
         this.statut = StatutPret.RETOURNE;
@@ -206,5 +206,12 @@ public class Pret {
 
     public boolean isActif() {
         return statut.isActive();
+    }
+
+    public void bloquer() {
+        if (statut != StatutPret.EN_COURS && statut != StatutPret.EMPRUNTE) {
+            throw new IllegalStateException("Seuls les prêts en cours ou empruntés peuvent être bloqués");
+        }
+        this.statut = StatutPret.BLOQUE;
     }
 }

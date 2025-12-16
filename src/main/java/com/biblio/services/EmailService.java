@@ -118,4 +118,31 @@ public class EmailService {
             throw new RuntimeException("Impossible d'envoyer l'email de rappel de retrait", e);
         }
     }
+
+    public void sendPretRetourReminderEmail(String toEmail, String nom, String prenom, String titreRessource, long joursRestants, String dateRetourPrevuDisplay) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Rappel de retour de votre livre - Biblio");
+            String body = String.format(
+                "Bonjour %s %s,\n\n" +
+                "Vous avez emprunté \"%s\".\n" +
+                "Il vous reste %d jour(s) avant la date de retour prévue: %s.\n\n" +
+                "Merci de retourner le livre à temps pour éviter le blocage de votre prêt.\n\n" +
+                "Cordialement,\n" +
+                "Votre bibliothèque",
+                prenom, nom,
+                titreRessource != null ? titreRessource : "Ressource",
+                Math.max(joursRestants, 0),
+                dateRetourPrevuDisplay != null ? dateRetourPrevuDisplay : "bientôt"
+            );
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Email de rappel de retour envoyé à : {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Erreur lors de l'envoi de l'email de rappel de retour à {} : {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Impossible d'envoyer l'email de rappel de retour", e);
+        }
+    }
 }
