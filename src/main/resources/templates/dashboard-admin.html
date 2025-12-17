@@ -374,6 +374,25 @@
                                 <input type="number" class="form-control" id="biblioCapaciteStock" min="0">
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="biblioLatitude" class="form-label">Latitude</label>
+                                <input type="number" step="0.000001" class="form-control" id="biblioLatitude" placeholder="Ex: 48.8566">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="biblioLongitude" class="form-label">Longitude</label>
+                                <input type="number" step="0.000001" class="form-control" id="biblioLongitude" placeholder="Ex: 2.3522">
+                            </div>
+                            <div class="col-md-4 mb-3 d-flex align-items-end">
+                                <button type="button" class="btn btn-outline-secondary w-100" id="simulateProximityBtn">
+                                    <i class="bi bi-geo-alt me-2"></i>Simuler proximité
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div id="leafletMapCreate" style="height: 300px; width: 100%; border: 1px solid #dee2e6; border-radius: .5rem;"></div>
+                            <small class="text-muted">Cliquez sur la carte pour définir la position.</small>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
@@ -676,6 +695,8 @@
                             <td>${biblio.adresse || '-'}</td>
                             <td>${biblio.telephone || '-'}</td>
                             <td>${biblio.capaciteStock ?? '-'}</td>
+                            <td>${biblio.latitude ?? '-'}</td>
+                            <td>${biblio.longitude ?? '-'}</td>
                             <td>
                                 <span class="badge ${biblio.actif ? 'bg-success' : 'bg-danger'}">
                                     ${biblio.actif ? 'Active' : 'Inactive'}
@@ -784,10 +805,147 @@
         });
 
         // Afficher le modal de création de bibliothèque
-        function showCreateBibliothequeModal() {
+        async function showCreateBibliothequeModal() {
             const modal = new bootstrap.Modal(document.getElementById('createBibliothequeModal'));
             modal.show();
+            await ensureLeafletLoaded();
+            setTimeout(initCreateMapIfNeeded, 150);
         }
+
+        function ensureLeafletLoaded() {
+            return new Promise((resolve) => {
+                if (window.L) {
+                    resolve();
+                    return;
+                }
+                // Fallback CSS
+                const existingCss = document.querySelector('link[href*="leaflet.css"]');
+                if (!existingCss) {
+                    const css = document.createElement('link');
+                    css.rel = 'stylesheet';
+                    css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
+                    document.head.appendChild(css);
+                }
+                // Fallback JS
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
+                script.onload = () => resolve();
+                script.onerror = () => {
+                    // Dernier fallback jsDelivr
+                    const s2 = document.createElement('script');
+                    s2.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
+                    s2.onload = () => resolve();
+                    s2.onerror = () => resolve(); // Résoudre tout de même pour ne pas bloquer
+                    document.head.appendChild(s2);
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        let leafletCreateMap = null;
+        let leafletCreateMarker = null;
+        function initCreateMapIfNeeded() {
+            if (!window.L) return;
+            const el = document.getElementById('leafletMapCreate');
+            if (!el) return;
+            if (leafletCreateMap) {
+                leafletCreateMap.invalidateSize();
+                return;
+            }
+            leafletCreateMap = L.map('leafletMapCreate').setView([48.8566, 2.3522], 5);
+            const primary = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+            const fallback = 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png';
+            const layer = L.tileLayer(primary, {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
+            });
+            layer.on('tileerror', function() {
+                try {
+                    leafletCreateMap.removeLayer(layer);
+                } catch (e) {}
+                L.tileLayer(fallback, {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(leafletCreateMap);
+            });
+            layer.addTo(leafletCreateMap);
+            setTimeout(() => leafletCreateMap && leafletCreateMap.invalidateSize(), 200);
+            leafletCreateMap.on('click', function(e) {
+                const { lat, lng } = e.latlng;
+                document.getElementById('biblioLatitude').value = lat.toFixed(6);
+                document.getElementById('biblioLongitude').value = lng.toFixed(6);
+                if (leafletCreateMarker) {
+                    leafletCreateMap.removeLayer(leafletCreateMarker);
+                }
+                leafletCreateMarker = L.marker([lat, lng]).addTo(leafletCreateMap);
+            });
+        }
+        document.getElementById('createBibliothequeModal').addEventListener('shown.bs.modal', () => {
+            initCreateMapIfNeeded();
+            if (leafletCreateMap) leafletCreateMap.invalidateSize();
+        });
+        document.getElementById('createBibliothequeModal').addEventListener('hidden.bs.modal', () => {
+            if (leafletCreateMap) {
+                leafletCreateMap.remove();
+                leafletCreateMap = null;
+                leafletCreateMarker = null;
+            }
+        });
+        document.getElementById('simulateProximityBtn').addEventListener('click', function() {
+            const ville = document.getElementById('biblioVille').value.trim().toLowerCase();
+            const presets = {
+                'paris': [48.8566, 2.3522],
+                'lyon': [45.7640, 4.8357],
+                'marseille': [43.2965, 5.3698],
+                'toulouse': [43.6047, 1.4442],
+                'lille': [50.6292, 3.0573],
+                'tunis': [36.8065, 10.1815]
+            };
+            const base = presets[ville] || [48.8566, 2.3522];
+            const jitter = () => (Math.random() - 0.5) * 0.05;
+            const lat = base[0] + jitter();
+            const lng = base[1] + jitter();
+            document.getElementById('biblioLatitude').value = lat.toFixed(6);
+            document.getElementById('biblioLongitude').value = lng.toFixed(6);
+            initCreateMapIfNeeded();
+            if (leafletCreateMap) {
+                leafletCreateMap.setView([lat, lng], 12);
+                if (leafletCreateMarker) leafletCreateMap.removeLayer(leafletCreateMarker);
+                leafletCreateMarker = L.marker([lat, lng]).addTo(leafletCreateMap);
+            }
+        });
+        async function geocodeAddress(query) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+                const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                const data = await resp.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+                }
+            } catch (err) {
+                console.error('Erreur de géocodage:', err);
+            }
+            return null;
+        }
+        async function tryGeocodeBibliotheque() {
+            const adresse = document.getElementById('biblioAdresse').value.trim();
+            const ville = document.getElementById('biblioVille').value.trim();
+            const query = [adresse, ville].filter(Boolean).join(', ');
+            if (!query) return;
+            const coords = await geocodeAddress(query);
+            if (coords) {
+                document.getElementById('biblioLatitude').value = coords.lat.toFixed(6);
+                document.getElementById('biblioLongitude').value = coords.lon.toFixed(6);
+                initCreateMapIfNeeded();
+                if (leafletCreateMap) {
+                    leafletCreateMap.setView([coords.lat, coords.lon], 14);
+                    if (leafletCreateMarker) leafletCreateMap.removeLayer(leafletCreateMarker);
+                    leafletCreateMarker = L.marker([coords.lat, coords.lon]).addTo(leafletCreateMap);
+                }
+            }
+        }
+        document.getElementById('biblioAdresse').addEventListener('blur', tryGeocodeBibliotheque);
+        document.getElementById('biblioVille').addEventListener('change', tryGeocodeBibliotheque);
 
         // Créer une bibliothèque
         document.getElementById('createBibliothequeForm').addEventListener('submit', async (e) => {
@@ -826,7 +984,9 @@
                 adresse: adresseValue,
                 ville: villeValue,
                 telephone: telephoneValue ? telephoneValue : null,
-                capaciteStock: capaciteStockValue ? parseInt(capaciteStockValue) : null
+                capaciteStock: capaciteStockValue ? parseInt(capaciteStockValue) : null,
+                latitude: document.getElementById('biblioLatitude').value ? parseFloat(document.getElementById('biblioLatitude').value) : null,
+                longitude: document.getElementById('biblioLongitude').value ? parseFloat(document.getElementById('biblioLongitude').value) : null
             };
             
             try {
