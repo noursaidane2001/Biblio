@@ -145,4 +145,29 @@ public class EmailService {
             throw new RuntimeException("Impossible d'envoyer l'email de rappel de retour", e);
         }
     }
+
+    public void sendReservationRejectedEmail(String toEmail, String nom, String prenom, String titreRessource, String bibliothequeNom) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Réservation rejetée - Biblio");
+            String body = String.format(
+                "Bonjour %s %s,\n\n" +
+                "Votre réservation pour \"%s\" a été rejetée.\n" +
+                "Veuillez contacter le bibliothécaire%s pour connaître les raisons.\n\n" +
+                "Cordialement,\n" +
+                "Votre bibliothèque",
+                prenom, nom,
+                titreRessource != null ? titreRessource : "Ressource",
+                bibliothequeNom != null ? " de la bibliothèque \"" + bibliothequeNom + "\"" : ""
+            );
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Email de rejet de réservation envoyé à : {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Erreur lors de l'envoi de l'email de rejet à {} : {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Impossible d'envoyer l'email de rejet de réservation", e);
+        }
+    }
 }
