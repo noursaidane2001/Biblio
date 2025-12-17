@@ -137,6 +137,12 @@
                     <i class="bi bi-file-earmark-text me-2"></i>Logs Système
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" 
+                        type="button" role="tab">
+                    <i class="bi bi-graph-up me-2"></i>Rapports Analytiques
+                </button>
+            </li>
         </ul>
 
         <!-- Contenu des onglets -->
@@ -275,6 +281,58 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onglet Rapports -->
+            <div class="tab-pane fade" id="reports" role="tabpanel">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Rapports Analytiques</h5>
+                        <div class="dropdown">
+                            <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="reportsExportBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-download me-1"></i>Exporter
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="reportsExportBtn">
+                                <li><a class="dropdown-item" th:href="@{/admin/rapports/export/csv}">CSV</a></li>
+                                <li><a class="dropdown-item" th:href="@{/admin/rapports/export/pdf}">PDF</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- KPI Row -->
+                        <div class="row mb-4 justify-content-center">
+                             <div class="col-md-4">
+                                <div class="card bg-light border-0 shadow-sm">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-muted text-uppercase fw-bold mb-3">Taux de Rotation Global</h6>
+                                        <h2 class="display-4 fw-bold text-success mb-2" th:text="${rotationRate} + '%'">-</h2>
+                                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>(Total Prêts / Stock Total)</small>
+                                    </div>
+                                </div>
+                             </div>
+                        </div>
+                        
+                        <!-- Charts Row -->
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-header bg-white fw-bold">Prêts par Catégorie</div>
+                                    <div class="card-body">
+                                        <canvas id="catChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                 <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-header bg-white fw-bold">Prêts par Bibliothèque</div>
+                                    <div class="card-body">
+                                        <canvas id="bibChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -518,6 +576,8 @@
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
         @keyframes pulse {
@@ -544,10 +604,20 @@
         .log-level-INFO { color: #0dcaf0; }
         .log-level-WARN { color: #ffc107; }
         .log-level-ERROR { color: #dc3545; }
+        @media print {
+            body * { visibility: hidden; }
+            #reports, #reports * { visibility: visible; }
+            #reports { position: absolute; left: 0; top: 0; width: 100%; }
+        }
     </style>
     
     <script th:inline="javascript">
         const CURRENT_USER_ID = /*[[${user.id}]]*/ null;
+        const CAT_LABELS = /*[[${catLabels}]]*/ [];
+        const CAT_DATA = /*[[${catData}]]*/ [];
+        const BIB_LABELS = /*[[${bibLabels}]]*/ [];
+        const BIB_DATA = /*[[${bibData}]]*/ [];
+        const ROTATION_RATE = /*[[${rotationRate}]]*/ '0.00';
         // Récupérer le token JWT depuis localStorage
         function getAuthToken() {
             return localStorage.getItem('jwt');
@@ -1347,6 +1417,114 @@
                         toastEl.classList.add('show');
                     }
                 });
+            }
+
+            function initReportsCharts() {
+                const catCtx = document.getElementById('catChart');
+                if (catCtx && !catCtx.dataset.initialized) {
+                    new Chart(catCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: CAT_LABELS,
+                            datasets: [{
+                                label: 'Nombre de Prêts',
+                                data: CAT_DATA,
+                                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                    catCtx.dataset.initialized = 'true';
+                }
+
+                const bibCtx = document.getElementById('bibChart');
+                if (bibCtx && !bibCtx.dataset.initialized) {
+                    new Chart(bibCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: BIB_LABELS,
+                            datasets: [{
+                                label: 'Nombre de Prêts',
+                                data: BIB_DATA,
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.5)',
+                                    'rgba(54, 162, 235, 0.5)',
+                                    'rgba(255, 206, 86, 0.5)',
+                                    'rgba(75, 192, 192, 0.5)',
+                                    'rgba(153, 102, 255, 0.5)',
+                                    'rgba(255, 159, 64, 0.5)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: { responsive: true }
+                    });
+                    bibCtx.dataset.initialized = 'true';
+                }
+            }
+            
+            function exportReportsCSV() {
+                const lines = [];
+                lines.push('Taux de rotation global;' + ROTATION_RATE);
+                lines.push('Taux de rotation global (%);' + (parseFloat(ROTATION_RATE) * 100).toFixed(2) + '%');
+                lines.push('');
+                lines.push('Prêts par Catégorie');
+                lines.push('Catégorie;Nombre de Prêts');
+                for (let i = 0; i < CAT_LABELS.length; i++) {
+                    lines.push(`${CAT_LABELS[i]};${CAT_DATA[i] ?? 0}`);
+                }
+                lines.push('');
+                lines.push('Prêts par Bibliothèque');
+                lines.push('Bibliothèque;Nombre de Prêts');
+                for (let i = 0; i < BIB_LABELS.length; i++) {
+                    lines.push(`${BIB_LABELS[i]};${BIB_DATA[i] ?? 0}`);
+                }
+                const csv = lines.join('\\r\\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const now = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+                a.href = url;
+                a.download = `rapports-analytique-${now}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                URL.revokeObjectURL(url);
+                a.remove();
+            }
+            
+            function exportReportsPDF() {
+                const element = document.querySelector('#reports .card');
+                if (!element) return;
+                const now = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+                const filename = `rapports-analytique-${now}.pdf`;
+                if (typeof html2pdf !== 'undefined') {
+                    const opt = {
+                        margin: 10,
+                        filename,
+                        image: { type: 'jpeg', quality: 0.95 },
+                        html2canvas: { scale: 2, useCORS: true },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                    };
+                    html2pdf().from(element).set(opt).save();
+                } else {
+                    window.print();
+                }
+            }
+            const reportsTab = document.getElementById('reports-tab');
+            if (reportsTab) {
+                reportsTab.addEventListener('shown.bs.tab', function() {
+                    initReportsCharts();
+                });
+            }
+            const reportsPane = document.getElementById('reports');
+            if (reportsPane && reportsPane.classList.contains('show')) {
+                initReportsCharts();
             }
         });
     </script>

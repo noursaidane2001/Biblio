@@ -35,4 +35,10 @@ public interface PretDAO extends JpaRepository<Pret, Long> {
     @Query("SELECT COUNT(p) FROM Pret p WHERE p.utilisateur.id = :utilisateurId AND p.statut IN (:statuts)")
     long countActifsByUtilisateur(@Param("utilisateurId") Long utilisateurId,
                                   @Param("statuts") java.util.List<StatutPret> statuts);
+
+    @Query("SELECT r.categorie, COUNT(p) FROM Pret p JOIN p.ressource r GROUP BY r.categorie")
+    List<Object[]> countPretsByCategorie();
+
+    @Query("SELECT p.bibliotheque.nom, COUNT(p) FROM Pret p GROUP BY p.bibliotheque.nom")
+    List<Object[]> countPretsByBibliotheque();
 }

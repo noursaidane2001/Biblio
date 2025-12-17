@@ -367,6 +367,7 @@
                 const listForDisplay = filtrerReservations(list);
                 renderReservationsListe(listForDisplay);
                 mettreAJourCompteurs();
+                renderRecommendations();
             } catch (e) {
                 console.warn('Impossible de charger les réservations usager', e);
             }
@@ -723,6 +724,54 @@
         function tronquer(text, max) {
             if (!text) return '';
             return text.length > max ? text.substring(0, max).trim() + '…' : text;
+        }
+        
+        function calculerTopReservationsParUsager() {
+            const list = Array.isArray(reservationsUsagerList) ? reservationsUsagerList : [];
+            const counts = {};
+            const meta = {};
+            list.forEach(r => {
+                const key = r.ressource && r.ressource.id ? String(r.ressource.id) : null;
+                if (!key) return;
+                counts[key] = (counts[key] || 0) + 1;
+                if (!meta[key]) meta[key] = r.ressource;
+            });
+            const entries = Object.keys(counts).map(id => ({ id, count: counts[id], ressource: meta[id] }));
+            entries.sort((a, b) => b.count - a.count);
+            return entries.slice(0, 2);
+        }
+        
+        function renderRecommendations() {
+            const grid = document.getElementById('recommendationGrid');
+            const top = calculerTopReservationsParUsager();
+            if (!grid) return;
+            if (top.length === 0) {
+                grid.innerHTML = `<div class="col-12 text-center text-muted">Aucune recommandation disponible pour le moment.</div>`;
+                return;
+            }
+            grid.innerHTML = top.map(item => {
+                const r = item.ressource || {};
+                const titre = r.titre || 'Ressource';
+                const auteur = r.auteur || '';
+                const categorie = CATALOG_CATEGORY_LABELS[r.categorie] || '';
+                const typeLabel = CATALOG_TYPE_LABELS[r.typeRessource] || '';
+                return `
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card h-100 border-0 shadow-sm hover-shadow animate-fade-in">
+                            <div class="card-body">
+                                <div class="d-flex gap-2 mb-2 flex-wrap">
+                                    ${categorie ? `<span class="badge bg-primary-subtle text-primary">${categorie}</span>` : ''}
+                                    ${typeLabel ? `<span class="badge bg-secondary-subtle text-secondary">${typeLabel}</span>` : ''}
+                                    <span class="badge bg-warning-subtle text-warning">Réservations: ${item.count}</span>
+                                </div>
+                                <h5 class="fw-bold mb-1">${titre}</h5>
+                                <p class="text-muted small mb-2"><i class="bi bi-pen me-1"></i>${auteur}</p>
+                                <div class="text-muted small">Basé sur vos réservations les plus fréquentes</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
     </script>
 </body>
