@@ -390,7 +390,9 @@ public class AdminController {
                     request.adresse(),
                     request.ville(),
                     request.telephone(),
-                    request.capaciteStock()
+                    request.capaciteStock(),
+                    request.latitude(),
+                    request.longitude()
             );
 
             Map<String, Object> result = new HashMap<>();
@@ -470,6 +472,8 @@ public class AdminController {
         map.put("telephone", bibliotheque.getTelephone());
         map.put("capaciteStock", bibliotheque.getCapaciteStock());
         map.put("actif", bibliotheque.getActif());
+        map.put("latitude", bibliotheque.getLatitude());
+        map.put("longitude", bibliotheque.getLongitude());
         return map;
     }
 }

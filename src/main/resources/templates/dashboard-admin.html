@@ -458,6 +458,62 @@
         </div>
     </div>
 
+    <!-- Modal de visualisation d'une bibliothèque -->
+    <div class="modal fade" id="viewBibliothequeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-eye me-2"></i>Bibliothèque
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <div class="small text-muted">Nom</div>
+                            <div id="viewBiblioNom" class="fw-semibold">-</div>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <div class="small text-muted">Ville</div>
+                            <div id="viewBiblioVille" class="fw-semibold">-</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8 mb-2">
+                            <div class="small text-muted">Adresse</div>
+                            <div id="viewBiblioAdresse">-</div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="small text-muted">Téléphone</div>
+                            <div id="viewBiblioTelephone">-</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <div class="small text-muted">Capacité</div>
+                            <div id="viewBiblioCapacite">-</div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="small text-muted">Latitude</div>
+                            <div id="viewBiblioLat">-</div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="small text-muted">Longitude</div>
+                            <div id="viewBiblioLon">-</div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div id="leafletMapView" style="height: 300px; width: 100%; border: 1px solid #dee2e6; border-radius: .5rem;"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div th:replace="~{fragments/footer :: footer}"></div>
 
     <!-- Bootstrap 5 JS Bundle -->
@@ -703,6 +759,11 @@
                                 </span>
                             </td>
                             <td>
+                                <button class="btn btn-sm btn-outline-info me-1" 
+                                        onclick="showViewBibliothequeModal('${encodeURIComponent(JSON.stringify(biblio))}')" 
+                                        title="Voir">
+                                    <i class="bi bi-eye"></i>
+                                </button>
                                 <button class="btn btn-sm btn-outline-warning me-1" 
                                         onclick="showEditBibliothequeModal('${encodeURIComponent(JSON.stringify(biblio))}')" 
                                         title="Modifier">
@@ -947,6 +1008,72 @@
         document.getElementById('biblioAdresse').addEventListener('blur', tryGeocodeBibliotheque);
         document.getElementById('biblioVille').addEventListener('change', tryGeocodeBibliotheque);
 
+        let leafletViewMap = null;
+        let leafletViewMarker = null;
+        async function showViewBibliothequeModal(biblioJson) {
+            let b;
+            try {
+                b = typeof biblioJson === 'string' ? JSON.parse(decodeURIComponent(biblioJson)) : biblioJson;
+            } catch (e) {
+                alert('Données invalides');
+                return;
+            }
+            document.getElementById('viewBiblioNom').textContent = b.nom || '-';
+            document.getElementById('viewBiblioVille').textContent = b.ville || '-';
+            document.getElementById('viewBiblioAdresse').textContent = b.adresse || '-';
+            document.getElementById('viewBiblioTelephone').textContent = b.telephone || '-';
+            document.getElementById('viewBiblioCapacite').textContent = b.capaciteStock ?? '-';
+            document.getElementById('viewBiblioLat').textContent = b.latitude ?? '-';
+            document.getElementById('viewBiblioLon').textContent = b.longitude ?? '-';
+            const modal = new bootstrap.Modal(document.getElementById('viewBibliothequeModal'));
+            modal.show();
+            await ensureLeafletLoaded();
+            setTimeout(() => {
+                const el = document.getElementById('leafletMapView');
+                if (!el) return;
+                if (leafletViewMap) {
+                    leafletViewMap.remove();
+                    leafletViewMap = null;
+                    leafletViewMarker = null;
+                }
+                leafletViewMap = L.map('leafletMapView').setView([48.8566, 2.3522], 5);
+                const layer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap'
+                });
+                layer.on('tileerror', function() {
+                    try { leafletViewMap.removeLayer(layer); } catch (e) {}
+                    L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '&copy; OpenStreetMap'
+                    }).addTo(leafletViewMap);
+                });
+                layer.addTo(leafletViewMap);
+                let lat = b.latitude, lon = b.longitude;
+                if (lat == null || lon == null) {
+                    const q = [b.adresse, b.ville].filter(Boolean).join(', ');
+                    geocodeAddress(q).then(coords => {
+                        if (coords) {
+                            lat = coords.lat;
+                            lon = coords.lon;
+                            leafletViewMap.setView([lat, lon], 14);
+                            leafletViewMarker = L.marker([lat, lon]).addTo(leafletViewMap);
+                        }
+                    });
+                } else {
+                    leafletViewMap.setView([lat, lon], 14);
+                    leafletViewMarker = L.marker([lat, lon]).addTo(leafletViewMap);
+                }
+            }, 150);
+        }
+        document.getElementById('viewBibliothequeModal').addEventListener('hidden.bs.modal', () => {
+            if (leafletViewMap) {
+                leafletViewMap.remove();
+                leafletViewMap = null;
+                leafletViewMarker = null;
+            }
+        });
+
         // Créer une bibliothèque
         document.getElementById('createBibliothequeForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -978,7 +1105,12 @@
                 alert('Format de téléphone invalide');
                 return;
             }
-            
+            // Forcer une tentative de géocodage si latitude/longitude manquantes
+            const latField = document.getElementById('biblioLatitude');
+            const lonField = document.getElementById('biblioLongitude');
+            if (!latField.value || !lonField.value) {
+                await tryGeocodeBibliotheque();
+            }
             const formData = {
                 nom: nomValue,
                 adresse: adresseValue,
