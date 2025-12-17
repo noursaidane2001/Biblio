@@ -114,4 +114,81 @@ public class RessourceService {
         return ressourceDAO.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Ressource non trouvée avec l'ID: " + id));
     }
+
+    /**
+     * Met à jour une ressource existante (par un bibliothécaire) avec validations
+     */
+    @Transactional
+    public Ressource updateRessource(Long id,
+                                     String titre,
+                                     String auteur,
+                                     String isbn,
+                                     com.biblio.enums.Categorie categorie,
+                                     com.biblio.enums.TypeRessource typeRessource,
+                                     String description,
+                                     String editeur,
+                                     java.time.LocalDate datePublication,
+                                     Integer nombreExemplaires,
+                                     Integer exemplairesDisponibles,
+                                     String imageCouverture,
+                                     String bibliothecaireEmail) {
+        User bibliothecaire = userDAO.findByEmail(bibliothecaireEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Bibliothécaire non trouvé avec l'email: " + bibliothecaireEmail));
+        if (!bibliothecaire.isBibliothecaire()) {
+            throw new IllegalArgumentException("Seuls les bibliothécaires peuvent modifier des ressources");
+        }
+
+        Ressource ressource = ressourceDAO.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Ressource non trouvée avec l'ID: " + id));
+
+        if (ressource.getBibliotheque() == null || bibliothecaire.getBibliotheque() == null
+                || ressource.getBibliotheque().getId() != bibliothecaire.getBibliotheque().getId()) {
+            throw new IllegalStateException("Vous ne pouvez modifier que les ressources de votre bibliothèque");
+        }
+
+        // Validation ISBN si modifié
+        if (isbn != null) {
+            String currentIsbn = ressource.getIsbn();
+            String newIsbn = isbn.trim();
+            if (!newIsbn.isEmpty() && (currentIsbn == null || !newIsbn.equals(currentIsbn))) {
+                if (ressourceDAO.existsByIsbn(newIsbn)) {
+                    throw new IllegalArgumentException("Une ressource avec cet ISBN existe déjà");
+                }
+                ressource.setIsbn(newIsbn);
+            } else if (newIsbn.isEmpty()) {
+                ressource.setIsbn(null);
+            }
+        }
+
+        // Si le nombre d'exemplaires change, vérifier la capacité de la bibliothèque
+        if (nombreExemplaires != null) {
+            Bibliotheque bibliotheque = ressource.getBibliotheque();
+            if (bibliotheque.getCapaciteStock() != null) {
+                Integer currentStock = ressourceDAO.sumNombreExemplairesByBibliothequeId(bibliotheque.getId());
+                int oldExemplaires = ressource.getNombreExemplaires() != null ? ressource.getNombreExemplaires() : 0;
+                int newTotal = (currentStock != null ? currentStock : 0) - oldExemplaires + nombreExemplaires;
+                if (newTotal > bibliotheque.getCapaciteStock()) {
+                    throw new IllegalArgumentException("La mise à jour dépasse la capacité de stockage de la bibliothèque (" + bibliotheque.getCapaciteStock() + ")");
+                }
+            }
+            ressource.setNombreExemplaires(nombreExemplaires);
+        }
+
+        // Mettre à jour les autres champs si fournis
+        if (titre != null) ressource.setTitre(titre);
+        if (auteur != null) ressource.setAuteur(auteur);
+        if (categorie != null) ressource.setCategorie(categorie);
+        if (typeRessource != null) ressource.setTypeRessource(typeRessource);
+        if (description != null) ressource.setDescription(description);
+        if (editeur != null) ressource.setEditeur(editeur);
+        if (datePublication != null) ressource.setDatePublication(datePublication);
+        if (imageCouverture != null) ressource.setImageCouverture(imageCouverture);
+        if (exemplairesDisponibles != null) ressource.setExemplairesDisponibles(exemplairesDisponibles);
+
+        Ressource updated = ressourceDAO.save(ressource);
+        logger.info("Ressource mise à jour: {} (ID: {}) par bibliothécaire {} pour bibliothèque {}",
+                updated.getTitre(), updated.getId(), bibliothecaireEmail,
+                updated.getBibliotheque() != null ? updated.getBibliotheque().getNom() : "N/A");
+        return updated;
+    }
 }
