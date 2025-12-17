@@ -6,6 +6,8 @@ import com.biblio.entities.Ressource;
 import com.biblio.entities.User;
 import com.biblio.services.RessourceService;
 import jakarta.validation.Valid;
+import com.biblio.enums.Categorie;
+import com.biblio.enums.TypeRessource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -13,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -143,6 +146,76 @@ public class RessourceController {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
             error.put("error", "Failed to fetch ressources");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * PUT /api/ressources/{id}
+     * Met à jour une ressource (accessible aux bibliothécaires uniquement)
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('BIBLIOTHECAIRE')")
+    public ResponseEntity<Map<String, Object>> updateRessource(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> updates,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        try {
+            String titre = (String) updates.get("titre");
+            String auteur = (String) updates.get("auteur");
+            String isbn = (String) updates.get("isbn");
+            Categorie categorie = null;
+            if (updates.get("categorie") instanceof String s && !s.isBlank()) {
+                categorie = Categorie.valueOf(s.toUpperCase());
+            }
+            TypeRessource typeRessource = null;
+            if (updates.get("typeRessource") instanceof String t && !t.isBlank()) {
+                typeRessource = TypeRessource.valueOf(t.toUpperCase());
+            }
+            String description = (String) updates.get("description");
+            String editeur = (String) updates.get("editeur");
+            LocalDate datePublication = null;
+            if (updates.get("datePublication") instanceof String d && !d.isBlank()) {
+                datePublication = LocalDate.parse(d);
+            }
+            Integer nombreExemplaires = updates.get("nombreExemplaires") != null
+                    ? ((Number) updates.get("nombreExemplaires")).intValue() : null;
+            Integer exemplairesDisponibles = updates.get("exemplairesDisponibles") != null
+                    ? ((Number) updates.get("exemplairesDisponibles")).intValue() : null;
+            String imageCouverture = (String) updates.get("imageCouverture");
+
+            Ressource updated = ressourceService.updateRessource(
+                    id,
+                    titre,
+                    auteur,
+                    isbn,
+                    categorie,
+                    typeRessource,
+                    description,
+                    editeur,
+                    datePublication,
+                    nombreExemplaires,
+                    exemplairesDisponibles,
+                    imageCouverture,
+                    currentUser.getUsername()
+            );
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "Ressource mise à jour avec succès");
+            result.put("ressource", ressourceToMap(updated));
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to update ressource");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to update ressource");
             error.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
