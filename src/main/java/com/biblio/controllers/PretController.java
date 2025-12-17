@@ -242,7 +242,9 @@ public class PretController {
             map.put("ressource", Map.of(
                     "id", p.getRessource().getId(),
                     "titre", p.getRessource().getTitre(),
-                    "auteur", p.getRessource().getAuteur()
+                    "auteur", p.getRessource().getAuteur(),
+                    "categorie", p.getRessource().getCategorie() != null ? p.getRessource().getCategorie().name() : null,
+                    "typeRessource", p.getRessource().getTypeRessource() != null ? p.getRessource().getTypeRessource().name() : null
             ));
         }
         if (p.getUtilisateur() != null) {
