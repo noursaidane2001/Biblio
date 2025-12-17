@@ -182,5 +182,5 @@ public class BibliothequeService {
             logger.warn("Echec géocodage adresse/ville: {}", e.getMessage());
         }
         return null;
-    }
+    } 
 }
