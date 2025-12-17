@@ -20,7 +20,7 @@
         .resource-list { max-height: 200px; overflow-y: auto; }
     </style>
 </head>
-<body class="bg-gradient-primary">
+<body class="bg-light">
     <div th:replace="~{fragments/header :: header}"></div>
 
     <div class="container py-5">
@@ -230,9 +230,48 @@
                 map.fitBounds(bounds, {padding: [50, 50]});
             }
 
+            // Afficher la liste initiale des bibliothèques
+            displayLibraryList();
+
+            function displayLibraryList() {
+                var detailsDiv = document.getElementById('library-details');
+                if (librariesData.length === 0) {
+                     detailsDiv.innerHTML = '<p class="text-muted text-center mt-5">Aucune bibliothèque disponible.</p>';
+                     return;
+                }
+
+                var html = '<div class="list-group list-group-flush">';
+                librariesData.forEach(function(lib, index) {
+                    html += '<button type="button" class="list-group-item list-group-item-action py-3 library-item" data-index="' + index + '">';
+                    html += '<div class="d-flex w-100 justify-content-between">';
+                    html += '<h6 class="mb-1 text-primary">' + lib.name + '</h6>';
+                    html += '</div>';
+                    html += '<small class="text-muted"><i class="bi bi-geo-alt me-1"></i>' + lib.city + '</small>';
+                    html += '</button>';
+                });
+                html += '</div>';
+                detailsDiv.innerHTML = html;
+
+                // Ajouter les écouteurs d'événements
+                document.querySelectorAll('.library-item').forEach(function(item) {
+                    item.addEventListener('click', function() {
+                        var index = this.getAttribute('data-index');
+                        var lib = librariesData[index];
+                        displayLibraryDetails(lib);
+                        if (lib.lat && lib.lng) {
+                            map.setView([lib.lat, lib.lng], 13);
+                        }
+                    });
+                });
+            }
+
             function displayLibraryDetails(lib) {
                 var detailsDiv = document.getElementById('library-details');
-                var html = '<h4>' + lib.name + '</h4>';
+                var html = '<div class="d-flex align-items-center mb-3">';
+                html += '<button id="back-to-list" class="btn btn-outline-secondary btn-sm me-2"><i class="bi bi-arrow-left"></i></button>';
+                html += '<h4 class="mb-0 text-primary">' + lib.name + '</h4>';
+                html += '</div>';
+                
                 html += '<p class="text-muted"><i class="bi bi-geo-alt me-1"></i>' + lib.address + ', ' + lib.city + '</p>';
                 html += '<h6 class="mt-3 border-bottom pb-2">Ressources (' + lib.resources.length + (lib.resourceCount > 20 ? '+' : '') + ')</h6>';
                 
@@ -241,12 +280,9 @@
                 } else {
                     html += '<div class="resource-list list-group list-group-flush">';
                     lib.resources.forEach(function(res) {
-                        var badgeClass = res.disponible ? 'bg-success' : 'bg-warning';
-                        var badgeText = res.disponible ? 'Dispo' : 'Indispo';
                         html += '<div class="list-group-item px-0 py-2">';
                         html += '<div class="d-flex justify-content-between align-items-center">';
                         html += '<div><strong>' + res.titre + '</strong><br><small class="text-muted">' + res.auteur + '</small></div>';
-                        html += '<span class="badge ' + badgeClass + '">' + badgeText + '</span>';
                         html += '</div></div>';
                     });
                     html += '</div>';
@@ -256,6 +292,14 @@
                 }
                 
                 detailsDiv.innerHTML = html;
+
+                // Event listener pour le bouton retour
+                document.getElementById('back-to-list').addEventListener('click', function() {
+                    displayLibraryList();
+                    if (hasMarkers) {
+                        map.fitBounds(bounds, {padding: [50, 50]});
+                    }
+                });
             }
         });
     </script>
