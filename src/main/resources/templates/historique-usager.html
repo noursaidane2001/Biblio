@@ -76,6 +76,7 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2" id="histPretsPagination"></div>
                         <div id="histPretsEmpty" class="text-muted d-none">Aucun prêt.</div>
                     </div>
                 </div>
@@ -126,6 +127,7 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2" id="histReservationsPagination"></div>
                         <div id="histReservationsEmpty" class="text-muted d-none">Aucune réservation.</div>
                     </div>
                 </div>
@@ -136,6 +138,11 @@
     <script>
         let histPretsData = [];
         let histReservationsData = [];
+        let histPretsFiltered = [];
+        let histReservationsFiltered = [];
+        const PAGE_SIZE = 10;
+        let pretsPage = 1;
+        let resPage = 1;
         function fmtDate(d) {
             if (!d) return '-';
             const dt = new Date(d);
@@ -201,6 +208,7 @@
                 const data = await resp.json();
                 const items = Array.isArray(data.items) ? data.items : [];
                 histPretsData = items;
+                histPretsFiltered = items;
                 const tbody = document.getElementById('histPretsTbody');
                 const empty = document.getElementById('histPretsEmpty');
                 const count = document.getElementById('pretsCount');
@@ -211,7 +219,8 @@
                     if (empty) empty.classList.remove('d-none');
                     return;
                 }
-                renderPrets(items);
+                pretsPage = 1;
+                renderPrets(histPretsFiltered);
                 if (empty) empty.classList.add('d-none');
             } catch (e) {
                 const tbody = document.getElementById('histPretsTbody');
@@ -221,13 +230,19 @@
         function renderPrets(items) {
             const tbody = document.getElementById('histPretsTbody');
             const empty = document.getElementById('histPretsEmpty');
+            const pagination = document.getElementById('histPretsPagination');
             if (!tbody) return;
             if (!items || items.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">Aucun prêt.</td></tr>';
                 if (empty) empty.classList.remove('d-none');
+                if (pagination) pagination.innerHTML = '';
                 return;
             }
-            tbody.innerHTML = items.map(it => {
+            const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+            pretsPage = Math.min(Math.max(1, pretsPage), totalPages);
+            const start = (pretsPage - 1) * PAGE_SIZE;
+            const slice = items.slice(start, start + PAGE_SIZE);
+            tbody.innerHTML = slice.map(it => {
                     const titre = it.ressource && it.ressource.titre ? it.ressource.titre : 'Ressource';
                     const auteur = it.ressource && it.ressource.auteur ? it.ressource.auteur : '';
                     return `
@@ -244,6 +259,21 @@
                     `;
                 }).join('');
             if (empty) empty.classList.add('d-none');
+            if (pagination) {
+                const prevDisabled = pretsPage <= 1 ? 'disabled' : '';
+                const nextDisabled = pretsPage >= totalPages ? 'disabled' : '';
+                pagination.innerHTML = `
+                    <div class="small text-muted">Page ${pretsPage} / ${totalPages}</div>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-secondary" id="pretsPrev" ${prevDisabled}><i class="bi bi-chevron-left"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary" id="pretsNext" ${nextDisabled}><i class="bi bi-chevron-right"></i></button>
+                    </div>
+                `;
+                const prev = document.getElementById('pretsPrev');
+                const next = document.getElementById('pretsNext');
+                if (prev) prev.onclick = () => { pretsPage = Math.max(1, pretsPage - 1); renderPrets(histPretsFiltered); };
+                if (next) next.onclick = () => { pretsPage = Math.min(totalPages, pretsPage + 1); renderPrets(histPretsFiltered); };
+            }
         }
         async function loadHistoriqueReservations() {
             try {
@@ -251,6 +281,7 @@
                 const data = await resp.json();
                 const list = Array.isArray(data.reservations) ? data.reservations : [];
                 histReservationsData = list;
+                histReservationsFiltered = list;
                 const tbody = document.getElementById('histReservationsTbody');
                 const empty = document.getElementById('histReservationsEmpty');
                 const count = document.getElementById('reservationsCount');
@@ -261,7 +292,8 @@
                     if (empty) empty.classList.remove('d-none');
                     return;
                 }
-                renderReservations(list);
+                resPage = 1;
+                renderReservations(histReservationsFiltered);
                 if (empty) empty.classList.add('d-none');
             } catch (e) {
                 const tbody = document.getElementById('histReservationsTbody');
@@ -271,13 +303,19 @@
         function renderReservations(list) {
             const tbody = document.getElementById('histReservationsTbody');
             const empty = document.getElementById('histReservationsEmpty');
+            const pagination = document.getElementById('histReservationsPagination');
             if (!tbody) return;
             if (!list || list.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">Aucune réservation.</td></tr>';
                 if (empty) empty.classList.remove('d-none');
+                if (pagination) pagination.innerHTML = '';
                 return;
             }
-            tbody.innerHTML = list.map(r => {
+            const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+            resPage = Math.min(Math.max(1, resPage), totalPages);
+            const start = (resPage - 1) * PAGE_SIZE;
+            const slice = list.slice(start, start + PAGE_SIZE);
+            tbody.innerHTML = slice.map(r => {
                     const titre = r.ressource && r.ressource.titre ? r.ressource.titre : 'Ressource';
                     const auteur = r.ressource && r.ressource.auteur ? r.ressource.auteur : '';
                     return `
@@ -294,6 +332,21 @@
                     `;
                 }).join('');
             if (empty) empty.classList.add('d-none');
+            if (pagination) {
+                const prevDisabled = resPage <= 1 ? 'disabled' : '';
+                const nextDisabled = resPage >= totalPages ? 'disabled' : '';
+                pagination.innerHTML = `
+                    <div class="small text-muted">Page ${resPage} / ${totalPages}</div>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-secondary" id="resPrev" ${prevDisabled}><i class="bi bi-chevron-left"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary" id="resNext" ${nextDisabled}><i class="bi bi-chevron-right"></i></button>
+                    </div>
+                `;
+                const prev = document.getElementById('resPrev');
+                const next = document.getElementById('resNext');
+                if (prev) prev.onclick = () => { resPage = Math.max(1, resPage - 1); renderReservations(histReservationsFiltered); };
+                if (next) next.onclick = () => { resPage = Math.min(totalPages, resPage + 1); renderReservations(histReservationsFiltered); };
+            }
         }
         document.addEventListener('DOMContentLoaded', function() {
             loadHistoriquePrets();
@@ -311,6 +364,34 @@
             if (rf) rf.addEventListener('change', applyFiltersReservations);
             if (rt) rt.addEventListener('change', applyFiltersReservations);
         });
+        function applyFiltersPrets() {
+            const statut = document.getElementById('filterPretsStatut')?.value || '';
+            const from = document.getElementById('filterPretsFrom')?.value || '';
+            const to = document.getElementById('filterPretsTo')?.value || '';
+            const filtered = histPretsData.filter(it => {
+                const okStatut = !statut || it.statut === statut;
+                const dateRef = it.dateEmprunt || it.dateRetourEffectif || it.dateRetourPrevu || it.dateReservation;
+                const okDate = inRange(dateRef, from, to);
+                return okStatut && okDate;
+            });
+            histPretsFiltered = filtered;
+            pretsPage = 1;
+            renderPrets(histPretsFiltered);
+        }
+        function applyFiltersReservations() {
+            const statut = document.getElementById('filterResStatut')?.value || '';
+            const from = document.getElementById('filterResFrom')?.value || '';
+            const to = document.getElementById('filterResTo')?.value || '';
+            const filtered = histReservationsData.filter(r => {
+                const okStatut = !statut || r.statut === statut;
+                const dateRef = r.dateDemande || r.dateConfirmation || r.dateExpiration;
+                const okDate = inRange(dateRef, from, to);
+                return okStatut && okDate;
+            });
+            histReservationsFiltered = filtered;
+            resPage = 1;
+            renderReservations(histReservationsFiltered);
+        }
     </script>
 </body>
 </html>

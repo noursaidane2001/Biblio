@@ -31,7 +31,16 @@
                     </div>
                 </div>
                 <div class="d-flex gap-2">
-                     <a th:href="@{/dashboard}" class="btn btn-outline-secondary">
+                    <a sec:authorize="hasRole('USAGER')" th:href="@{/usager/dashboard}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Tableau de bord
+                    </a>
+                    <a sec:authorize="hasRole('BIBLIOTHECAIRE')" th:href="@{/bibliothecaire/dashboard}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Tableau de bord
+                    </a>
+                    <a sec:authorize="hasRole('ADMIN')" th:href="@{/bibliotheque-admin/dashboard}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Tableau de bord
+                    </a>
+                    <a sec:authorize="hasRole('SUPER_ADMIN')" th:href="@{/super-admin/dashboard}" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left me-2"></i>Tableau de bord
                     </a>
                     <a href="/login?logout" class="btn btn-outline-danger">
@@ -114,14 +123,6 @@
                          </div>
                     </div>
                 </div>
-                 <div class="card shadow-lg border-0">
-                    <div class="card-body">
-                         <h5 class="card-title mb-4 text-danger">Zone de danger</h5>
-                         <button class="btn btn-outline-danger" disabled>
-                            <i class="bi bi-key me-2"></i>Modifier le mot de passe (Bientôt)
-                         </button>
-                    </div>
-                 </div>
             </div>
         </div>
     </div>
