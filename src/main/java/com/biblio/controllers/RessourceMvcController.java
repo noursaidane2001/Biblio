@@ -46,6 +46,7 @@ public class RessourceMvcController {
      * Accessible à tous les utilisateurs authentifiés
      */
     @GetMapping("/list")
+    @PreAuthorize("isAuthenticated()")
     public String showRessourcesList(@AuthenticationPrincipal UserDetails currentUser, Model model) {
         // Récupérer l'utilisateur connecté
         User user = userDAO.findByEmail(currentUser.getUsername())

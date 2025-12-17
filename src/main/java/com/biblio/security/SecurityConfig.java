@@ -90,7 +90,7 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .requestMatchers("/bibliotheque-admin/**").hasRole("ADMIN")
                         .requestMatchers("/bibliothecaire/**").hasRole("BIBLIOTHECAIRE")
-                        .requestMatchers("/usager/**").authenticated() // Accessible à tous les utilisateurs authentifiés
+                        .requestMatchers("/usager/**").hasRole("USAGER")
                         .anyRequest().authenticated())
                 
                 // OAuth2 Login - Génère des JWT

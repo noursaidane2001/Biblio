@@ -1,7 +1,9 @@
 package com.biblio.controllers;
 
+import com.biblio.dao.UserDAO;
 import com.biblio.dto.CreateRessourceRequest;
 import com.biblio.entities.Ressource;
+import com.biblio.entities.User;
 import com.biblio.services.RessourceService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -20,9 +22,11 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/ressources")
 public class RessourceController {
     private final RessourceService ressourceService;
+    private final UserDAO userDAO;
 
-    public RessourceController(RessourceService ressourceService) {
+    public RessourceController(RessourceService ressourceService, UserDAO userDAO) {
         this.ressourceService = ressourceService;
+        this.userDAO = userDAO;
     }
 
     /**
@@ -73,12 +77,28 @@ public class RessourceController {
 
     /**
      * GET /api/ressources
-     * Liste toutes les ressources (accessible à tous les utilisateurs authentifiés)
+     * Liste toutes les ressources (filtrées par bibliothèque pour les bibliothécaires)
      */
     @GetMapping
-    public ResponseEntity<Map<String, Object>> getAllRessources() {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> getAllRessources(@AuthenticationPrincipal UserDetails currentUser) {
         try {
-            List<Map<String, Object>> ressources = ressourceService.getAllRessources().stream()
+            List<Ressource> ressourcesList;
+
+            if (currentUser != null) {
+                User user = userDAO.findByEmail(currentUser.getUsername()).orElse(null);
+                if (user != null && user.isBibliothecaire() && user.getBibliotheque() != null) {
+                    ressourcesList = ressourceService.getRessourcesByBibliotheque(user.getBibliotheque().getId());
+                } else {
+                    ressourcesList = ressourceService.getAllRessources();
+                }
+            } else {
+                // Pour les utilisateurs non authentifiés ou autres cas, on retourne tout ou rien selon la politique.
+                // Ici on retourne tout pour l'instant (comportement par défaut)
+                ressourcesList = ressourceService.getAllRessources();
+            }
+
+            List<Map<String, Object>> ressources = ressourcesList.stream()
                     .map(this::ressourceToMap)
                     .collect(Collectors.toList());
             
@@ -101,6 +121,7 @@ public class RessourceController {
      * Récupère une ressource par son ID
      */
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> getRessourceById(@PathVariable Long id) {
         try {
             Ressource ressource = ressourceService.getById(id);
@@ -122,6 +143,7 @@ public class RessourceController {
      * Liste toutes les ressources d'une bibliothèque
      */
     @GetMapping("/bibliotheque/{bibliothequeId}")
+    @PreAuthorize("hasAnyRole('BIBLIOTHECAIRE','ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Map<String, Object>> getRessourcesByBibliotheque(@PathVariable Long bibliothequeId) {
         try {
             List<Map<String, Object>> ressources = ressourceService.getRessourcesByBibliotheque(bibliothequeId).stream()
