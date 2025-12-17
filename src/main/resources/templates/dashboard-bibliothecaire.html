@@ -1,817 +1,754 @@
-	<!DOCTYPE html>
-	<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
-	<head>
-	    <meta charset="UTF-8">
-	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-	    <title>Tableau de bord - Bibliothécaire - Biblio</title>
-	    
-	    <!-- Bootstrap 5 CSS -->
-	    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" 
-	          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-	    <!-- Bootstrap Icons -->
-	    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-	    <!-- Custom CSS -->
-	    <link th:href="@{/css/custom.css}" rel="stylesheet">
-	</head>
-	<body class="bg-gradient-primary">
-	    <div th:replace="~{fragments/header :: header}"></div>
-	    <div th:replace="~{fragments/toasts :: toast-container}"></div>
-	
-	    <div class="container py-5">
-	        <!-- Message de bienvenue -->
-	        <div class="card shadow-lg border-0 mb-4 animate-fade-in">
-	            <div class="card-body p-4">
-	                <div class="d-flex align-items-center">
-	                    <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-4" 
-	                         style="width: 80px; height: 80px; animation: pulse 2s infinite;">
-	                        <i class="bi bi-book-half text-info" style="font-size: 3rem;"></i>
-	                    </div>
-	                    <div>
-	                        <h1 class="h3 fw-bold text-info mb-1">
-	                            <i class="bi bi-bookmark-check me-2"></i>Espace Bibliothécaire
-	                        </h1>
-	                        <p class="text-muted mb-0">
-	                            Bonjour <strong th:text="${user.nomComplet}">Bibliothécaire</strong>, 
-	                            gérez les ressources et les emprunts de votre bibliothèque.
-	                        </p>
-	                    </div>
-	                </div>
-	            </div>
-        </div>
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord - Bibliothécaire - Biblio</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" 
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/custom.css}" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div th:replace="~{fragments/toasts :: toast-container}"></div>
 
+    <div class="container py-5">
+        <!-- Bandeau bibliothécaire -->
         <div class="card shadow-lg border-0 mb-4">
-            <div class="card-header bg-danger text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-exclamation-octagon me-2"></i>Prêts bloqués
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
-                            <tr>
-                                <th>Ressource</th>
-                                <th>Usager</th>
-                                <th>Date emprunt</th>
-                                <th>Retour prévu</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pretsBloquesTbody">
-                            <tr>
-                                <td colspan="5" class="text-center text-muted">Chargement...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle bg-info bg-opacity-10 p-3 text-info fs-4">
+                        <i class="bi bi-book-half"></i>
+                    </div>
+                    <div>
+                        <h2 class="h4 fw-bold text-info mb-1">Espace Bibliothécaire</h2>
+                        <p class="mb-0 text-muted">Bonjour <strong th:text="${user.nomComplet}">Bibliothécaire</strong>, gérez les ressources et les emprunts.</p>
+                    </div>
                 </div>
-                <div id="pretsBloquesEmpty" class="alert alert-info d-none">
-                    <i class="bi bi-info-circle me-2"></i>Aucun prêt bloqué à afficher.
+                <div class="d-flex gap-2">
+                    <a th:href="@{/ressources/list}" class="btn btn-outline-info">
+                        <i class="bi bi-journal-text me-2"></i>Ressources
+                    </a>
+                    <a th:href="@{/user/profile}" class="btn btn-outline-primary">
+                        <i class="bi bi-person-gear me-2"></i>Profil
+                    </a>
+                    <a href="/login?logout" class="btn btn-outline-secondary">
+                        <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
+                    </a>
                 </div>
             </div>
         </div>
-        
-	        <!-- Cartes d'actions rapides pour bibliothécaire -->
-	        <div class="row g-4 mb-4">
-	            <div class="col-md-6 col-lg-4">
-	                <div class="card h-100 shadow-sm border-0 hover-shadow">
-	                    <div class="card-body text-center">
-	                        <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
-	                             style="width: 60px; height: 60px;">
-	                            <i class="bi bi-book text-info" style="font-size: 2rem;"></i>
-	                        </div>
-	                        <h5 class="card-title">Gérer les Ressources</h5>
-	                        <p class="card-text text-muted">Ajoutez, modifiez et gérez les livres et ressources</p>
-	                        <div class="d-grid gap-2">
-	    <a th:href="@{/ressources/new}" class="btn btn-info">
-	        <i class="bi bi-plus-circle me-2"></i>Ajouter une ressource
-	    </a>
-	
-	    <a th:href="@{/ressources/list}" class="btn btn-outline-info">
-	        <i class="bi bi-journal-text me-2"></i>Voir les ressources
-	    </a>
-	</div>
-	
-	                    </div>
-	                </div>
-	            </div>
-	
-	            <div class="col-md-6 col-lg-4">
-	                <div class="card h-100 shadow-sm border-0 hover-shadow">
-	                    <div class="card-body text-center">
-	                        <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
-	                             style="width: 60px; height: 60px;">
-	                            <i class="bi bi-people text-primary" style="font-size: 2rem;"></i>
-	                        </div>
-	                        <h5 class="card-title">Gérer les Emprunts</h5>
-	                        <p class="card-text text-muted">Validez et suivez les emprunts des usagers</p>
-	                        <button class="btn btn-primary" disabled>
-	                            <i class="bi bi-arrow-right me-2"></i>Bientôt disponible
-	                        </button>
-	                    </div>
-	                </div>
-	            </div>
-	
-	            <div class="col-md-6 col-lg-4">
-	                <div class="card h-100 shadow-sm border-0 hover-shadow">
-	                    <div class="card-body text-center">
-	                        <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
-	                             style="width: 60px; height: 60px;">
-	                            <i class="bi bi-bell text-warning" style="font-size: 2rem;"></i>
-	                        </div>
-	                        <h5 class="card-title">Notifications</h5>
-	                        <p class="card-text text-muted">Consultez les notifications et alertes</p>
-	                        <button class="btn btn-warning" id="openReservationsModal" data-bs-toggle="modal" data-bs-target="#reservationsModal">
-	                            <i class="bi bi-bell me-2"></i>Voir les réservations en attente
-	                        </button>
-	                    </div>
-	                </div>
-	            </div>
-	
-	            <div class="col-md-6 col-lg-4">
-	                <div class="card h-100 shadow-sm border-0 hover-shadow">
-	                    <div class="card-body text-center">
-	                        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
-	                             style="width: 60px; height: 60px;">
-	                            <i class="bi bi-person-circle text-success" style="font-size: 2rem;"></i>
-	                        </div>
-	                        <h5 class="card-title">Mon Profil</h5>
-	                        <p class="card-text text-muted">Consultez et modifiez vos informations</p>
-	                        <a th:href="@{/user/profile}" class="btn btn-success">
-	                            <i class="bi bi-arrow-right me-2"></i>Voir mon profil
-	                        </a>
-	                    </div>
-	                </div>
-	            </div>
-	
-	            <div class="col-md-6 col-lg-4">
-	                <div class="card h-100 shadow-sm border-0 hover-shadow">
-	                    <div class="card-body text-center">
-	                        <div class="bg-secondary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
-	                             style="width: 60px; height: 60px;">
-	                            <i class="bi bi-file-earmark-text text-secondary" style="font-size: 2rem;"></i>
-	                        </div>
-	                        <h5 class="card-title">Rapports</h5>
-	                        <p class="card-text text-muted">Générez et consultez les rapports</p>
-	                        <button class="btn btn-secondary" disabled>
-	                            <i class="bi bi-arrow-right me-2"></i>Bientôt disponible
-	                        </button>
-	                    </div>
-	                </div>
-	            </div>
-	        </div>
 
-	        <!-- Prêts empruntés -->
-	        <div class="card shadow-lg border-0 mb-4">
-	            <div class="card-header bg-success text-white">
-	                <h5 class="mb-0">
-	                    <i class="bi bi-book me-2"></i>Prêts empruntés
-	                </h5>
-	            </div>
-	            <div class="card-body">
-	                <div class="table-responsive">
-	                    <table class="table table-hover align-middle">
-	                        <thead>
-	                            <tr>
-	                                <th>Ressource</th>
-	                                <th>Usager</th>
-	                                <th>Date emprunt</th>
-	                                <th>Retour prévu</th>
-	                                <th>Actions</th>
-	                            </tr>
-	                        </thead>
-	                        <tbody id="pretsEmprunteTbody">
-	                            <tr>
-	                                <td colspan="5" class="text-center text-muted">Chargement...</td>
-	                            </tr>
-	                        </tbody>
-	                    </table>
-	                </div>
-	                <div id="pretsEmprunteEmpty" class="alert alert-info d-none">
-	                    <i class="bi bi-info-circle me-2"></i>Aucun prêt emprunté à afficher.
-	                </div>
-	            </div>
-	        </div>
-	        <div class="card shadow-lg border-0 mb-4">
-	            <div class="card-header bg-primary text-white">
-	                <h5 class="mb-0">
-	                    <i class="bi bi-eye me-2"></i>Prêts en cours
-	                </h5>
-	            </div>
-	            <div class="card-body">
-	                <div class="table-responsive">
-	                    <table class="table table-hover align-middle">
-	                        <thead>
-	                            <tr>
-	                                <th>Ressource</th>
-	                                <th>Usager</th>
-	                                <th>Date emprunt</th>
-	                                <th>Retour prévu</th>
-	                                <th>Actions</th>
-	                            </tr>
-	                        </thead>
-	                        <tbody id="pretsEnCoursTbody">
-	                            <tr>
-	                                <td colspan="5" class="text-center text-muted">Chargement...</td>
-	                            </tr>
-	                        </tbody>
-	                    </table>
-	                </div>
-	                <div id="pretsEnCoursEmpty" class="alert alert-info d-none">
-	                    <i class="bi bi-info-circle me-2"></i>Aucun prêt en cours à afficher.
-	                </div>
-	            </div>
-	        </div>
-	
-	        <!-- Informations du compte -->
-	        <div class="row g-4">
-	            <div class="col-md-6">
-	                <div class="card shadow-lg border-0">
-	                    <div class="card-header bg-info text-white">
-	                        <h5 class="mb-0">
-	                            <i class="bi bi-info-circle me-2"></i>Informations du compte
-	                        </h5>
-	                    </div>
-	                    <div class="card-body">
-	                        <table class="table table-borderless">
-	                            <tr>
-	                                <td class="fw-semibold text-muted">Nom complet:</td>
-	                                <td th:text="${user.nomComplet}">Nom Complet</td>
-	                            </tr>
-	                            <tr>
-	                                <td class="fw-semibold text-muted">Email:</td>
-	                                <td th:text="${user.email}">email@example.com</td>
-	                            </tr>
-	                            <tr>
-	                                <td class="fw-semibold text-muted">Rôle:</td>
-	                                <td>
-	                                    <span class="badge bg-info" th:text="${user.role.displayName}">Bibliothécaire</span>
-	                                </td>
-	                            </tr>
-	                            <tr>
-	                                <td class="fw-semibold text-muted">Statut:</td>
-	                                <td>
-	                                    <span class="badge" 
-	                                          th:classappend="${user.actif} ? 'bg-success' : 'bg-danger'"
-	                                          th:text="${user.actif} ? 'Actif' : 'Inactif'">
-	                                        Statut
-	                                    </span>
-	                                </td>
-	                            </tr>
-	                            <tr th:if="${user.bibliotheque != null}">
-	                                <td class="fw-semibold text-muted">Bibliothèque:</td>
-	                                <td th:text="${user.bibliotheque.nom}">Bibliothèque</td>
-	                            </tr>
-	                        </table>
-	                    </div>
-	                </div>
-	            </div>
-	
-	            <div class="col-md-6">
-	                <div class="card shadow-lg border-0">
-	                    <div class="card-header bg-success text-white">
-	                        <h5 class="mb-0">
-	                            <i class="bi bi-shield-check me-2"></i>Actions rapides
-	                        </h5>
-	                    </div>
-	                    <div class="card-body">
-	                        <div class="d-grid gap-2">
-	                            <a th:href="@{/user/profile}" class="btn btn-outline-info">
-	                                <i class="bi bi-person-gear me-2"></i>Gérer mon profil
-	                            </a>
-	                            <a th:href="@{/bibliothecaire/dashboard}" class="btn btn-outline-secondary">
-	                                <i class="bi bi-house me-2"></i>Retour à l'accueil
-	                            </a>
-	                            <form th:action="@{/logout}" method="post" style="display: inline;">
-	                                <button type="submit" class="btn btn-outline-danger w-100">
-	                                    <i class="bi bi-box-arrow-right me-2"></i>Se déconnecter
-	                                </button>
-	                            </form>
-	                        </div>
-	                    </div>
-	                </div>
-	            </div>
-	        </div>
-	    </div>
-	
-	    <div th:replace="~{fragments/footer :: footer}"></div>
-	
-	    <!-- Bootstrap 5 JS Bundle -->
-	    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-	    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-	    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
-	    
-	    <style>
-	        @keyframes pulse {
-	            0%, 100% { transform: scale(1); }
-	            50% { transform: scale(1.05); }
-	        }
-	        .animate-fade-in {
-	            animation: fadeIn 0.5s ease-in;
-	        }
-	        @keyframes fadeIn {
-	            from { opacity: 0; transform: translateY(-10px); }
-	            to { opacity: 1; transform: translateY(0); }
-	        }
-	        .hover-shadow {
-	            transition: transform 0.2s, box-shadow 0.2s;
-	        }
-	        .hover-shadow:hover {
-	            transform: translateY(-5px);
-	            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-	        }
-	    </style>
-	    
-	    <script th:inline="javascript">
-	        const BIB_ID = [[${user.bibliotheque != null ? user.bibliotheque.id : null}]];
-	        async function loadPretsEmprunte() {
-	            try {
-	                const resp = await fetch('/api/prets/a-retirer', { headers: { 'Accept': 'application/json' } });
-	                const data = await resp.json();
-	                const tbody = document.getElementById('pretsEmprunteTbody');
-	                const empty = document.getElementById('pretsEmprunteEmpty');
-	                if (!tbody) return;
-	                const items = Array.isArray(data.items) ? data.items : [];
-	                const rows = items.filter(it => it.statut === 'EMPRUNTE').map(it => {
-	                    const titre = it.ressource && it.ressource.titre ? it.ressource.titre : 'Ressource';
-	                    const usager = it.utilisateur ? `${it.utilisateur.prenom || ''} ${it.utilisateur.nom || ''}`.trim() : '';
-	                    const dateEmprunt = it.dateEmprunt ? new Date(it.dateEmprunt) : null;
-	                    const dateRetourPrevu = it.dateRetourPrevu ? new Date(it.dateRetourPrevu) : (it.deadlineRetrait ? new Date(it.deadlineRetrait) : null);
-	                    const fmtDT = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '-';
-	                    const fmtD = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '-';
-	                    return `
-	                        <tr>
-	                            <td>
-	                                <div class="fw-semibold">${titre}</div>
-	                                <div class="text-muted small">${it.ressource && it.ressource.auteur ? it.ressource.auteur : ''}</div>
-	                            </td>
-	                            <td>${usager}</td>
-	                            <td>${fmtDT(dateEmprunt)}</td>
-	                            <td>${fmtD(dateRetourPrevu)}</td>
-	                            <td class="text-nowrap">
-	                                <button class="btn btn-sm btn-outline-primary" onclick="relancerPret(${it.id})">📧 Relancer</button>
-	                                <button class="btn btn-sm btn-outline-danger" onclick="annulerPret(${it.id})">❌ Annuler</button>
-	                                <button class="btn btn-sm btn-success" onclick="confirmerRetraitPret(${it.id})">✅ Confirmer retrait</button>
-	                            </td>
-	                        </tr>
-	                    `;
-	                });
-	                if (rows.length === 0) {
-	                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Aucun prêt emprunté à afficher.</td></tr>';
-	                    if (empty) empty.classList.remove('d-none');
-	                } else {
-	                    tbody.innerHTML = rows.join('');
-	                    if (empty) empty.classList.add('d-none');
-	                }
-	            } catch (e) {
-	                const tbody = document.getElementById('pretsEmprunteTbody');
-	                if (tbody) {
-	                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur de chargement</td></tr>';
-	                }
-	            }
-	        }
-	        
-	        async function confirmerRetraitPret(id) {
-	            const btns = document.querySelectorAll(`button[onclick="confirmerRetraitPret(${id})"]`);
-	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
-	            try {
-	                const resp = await fetch(`/api/prets/${id}/en-cours`, {
-	                    method: 'PUT',
-	                    headers: { 'Accept': 'application/json' }
-	                });
-	                const data = await resp.json();
-	                if (data && data.success) {
-	                    await loadPretsEmprunte();
-	                } else {
-	                    btns.forEach(b => { b.disabled = false; b.textContent = '✅ Confirmer retrait'; });
-	                }
-	            } catch (_) {
-	                btns.forEach(b => { b.disabled = false; b.textContent = '✅ Confirmer retrait'; });
-	            }
-	        }
-	        
-	        async function relancerPret(id) {
-	            const btns = document.querySelectorAll(`button[onclick="relancerPret(${id})"]`);
-	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
-	            try {
-	                const resp = await fetch(`/api/prets/${id}/relancer`, {
-	                    method: 'POST',
-	                    headers: { 'Accept': 'application/json' }
-	                });
-	                const data = await resp.json();
-	                if (data && data.success) {
-	                    btns.forEach(b => { b.disabled = false; b.textContent = '📧 Relancer'; });
-	                } else {
-	                    btns.forEach(b => { b.disabled = false; b.textContent = '📧 Relancer'; });
-	                }
-	            } catch (_) {
-	                btns.forEach(b => { b.disabled = false; b.textContent = '📧 Relancer'; });
-	            }
-	        }
-	        
-	        async function annulerPret(id) {
-	            const btns = document.querySelectorAll(`button[onclick="annulerPret(${id})"]`);
-	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
-	            try {
-	                const resp = await fetch(`/api/prets/${id}/annuler`, {
-	                    method: 'PUT',
-	                    headers: { 'Accept': 'application/json' }
-	                });
-	                const data = await resp.json();
-	                if (data && data.success) {
-	                    await loadPretsEmprunte();
-	                } else {
-	                    btns.forEach(b => { b.disabled = false; b.textContent = '❌ Annuler'; });
-	                }
-	            } catch (_) {
-	                btns.forEach(b => { b.disabled = false; b.textContent = '❌ Annuler'; });
-	            }
-	        }
-	        
-	        async function loadReservationsEnAttente() {
-	            try {
-	                const resp = await fetch('/api/reservations/en-attente', {
-	                    headers: { 'Accept': 'application/json' }
-	                });
-	                const data = await resp.json();
-	                const list = document.getElementById('reservationsList');
-	                const countBadge = document.getElementById('notifCount');
-	                const total = data && data.total ? data.total : 0;
-	                if (countBadge) {
-	                    if (total > 0) {
-	                        countBadge.style.display = 'inline';
-	                        countBadge.textContent = '' + total;
-	                    } else {
-	                        countBadge.style.display = 'none';
-	                    }
-	                }
-	                if (!list) return;
-	                if (data.success && Array.isArray(data.reservations) && data.reservations.length > 0) {
-	                    list.innerHTML = data.reservations.map(item => {
-	                        const titre = (item.ressource && item.ressource.titre) ? item.ressource.titre : 'Ressource';
-	                        const auteur = (item.ressource && item.ressource.auteur) ? item.ressource.auteur : '';
-	                        const usagerNom = (item.usager && item.usager.nom) ? item.usager.nom : '';
-	                        const usagerPrenom = (item.usager && item.usager.prenom) ? item.usager.prenom : '';
-	                        const dateDemande = item.dateDemande || '';
-	                        return `
-	                            <li class="list-group-item">
-	                                <div class="d-flex justify-content-between align-items-start">
-	                                    <div class="ms-2 me-auto">
-	                                        <div class="fw-semibold">${titre}${auteur ? ' — ' + auteur : ''}</div>
-	                                        <small class="text-muted">Usager: ${usagerPrenom} ${usagerNom} · Demande: ${dateDemande}</small>
-	                                    </div>
-	                                    <span class="badge bg-warning text-dark">En attente</span>
-	                                </div>
-	                                <div class="mt-2 d-flex gap-2 justify-content-end">
-	                                    <button class="btn btn-sm btn-success" onclick="confirmReservation(${item.id})">
-	                                        <i class="bi bi-check2 me-1"></i>Confirmer
-	                                    </button>
-	                                    <button class="btn btn-sm btn-outline-danger" onclick="rejectReservation(${item.id})">
-	                                        <i class="bi bi-x me-1"></i>Rejeter
-	                                    </button>
-	                                </div>
-	                            </li>
-	                        `;
-	                    }).join('');
-	                } else {
-	                    list.innerHTML = '<li class="list-group-item text-muted">Aucune réservation en attente</li>';
-	                }
-	            } catch (e) {
-	                const list = document.getElementById('reservationsList');
-	                if (list) list.innerHTML = '<li class="list-group-item text-danger">Erreur de chargement des réservations</li>';
-	            }
-	        }
-	        
-	        function connectReservationsWS() {
-	            if (!BIB_ID) return;
-	            const socket = new SockJS('/ws');
-	            const client = Stomp.over(socket);
-	            client.debug = null;
-	            client.connect({}, function() {
-	                client.subscribe('/topic/reservations/en-attente/' + BIB_ID, function(message) {
-	                    const count = parseInt(message.body, 10);
-	                    const badge = document.getElementById('notifCount');
-	                    if (badge) {
-	                        if (isNaN(count) || count <= 0) {
-	                            badge.style.display = 'none';
-	                        } else {
-	                            badge.style.display = 'inline';
-	                            badge.textContent = '' + count;
-	                        }
-	                    }
-	                    loadReservationsEnAttente();
-	                });
-	            });
-	        }
-	        
-	        async function confirmReservation(id) {
-	            try {
-	                const commentaire = window.prompt('Commentaire (optionnel) :', '');
-	                const resp = await fetch('/api/reservations/' + id + '/confirmer', {
-	                    method: 'POST',
-	                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-	                    body: JSON.stringify({ commentaire })
-	                });
-	                const data = await resp.json();
-	                if (data.success) {
-	                    loadReservationsEnAttente();
-	                } else {
-	                    alert('Erreur de confirmation: ' + (data.error || data.message || ''));
-	                }
-	            } catch (e) {
-	                alert('Erreur de confirmation: ' + e.message);
-	            }
-	        }
-	        
-	        async function rejectReservation(id) {
-	            try {
-	                const raison = window.prompt('Raison du rejet :', '');
-	                const resp = await fetch('/api/reservations/' + id + '/rejeter', {
-	                    method: 'POST',
-	                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-	                    body: JSON.stringify({ raison })
-	                });
-	                const data = await resp.json();
-	                if (data.success) {
-	                    loadReservationsEnAttente();
-	                } else {
-	                    alert('Erreur de rejet: ' + (data.error || data.message || ''));
-	                }
-	            } catch (e) {
-	                alert('Erreur de rejet: ' + e.message);
-	            }
-	        }
-	        
-	        // Initialiser les toasts Bootstrap
-	        document.addEventListener('DOMContentLoaded', function() {
-	            const notifLink = document.getElementById('notificationsLink');
-	            if (notifLink) {
-	                notifLink.addEventListener('click', function(e) {
-	                    e.preventDefault();
-	                    const modalEl = document.getElementById('reservationsModal');
-	                    if (modalEl) {
-	                        const modal = new bootstrap.Modal(modalEl);
-	                        modal.show();
-	                        loadReservationsEnAttente();
-	                    }
-	                });
-	            }
-	            const openBtn = document.getElementById('openReservationsModal');
-	            if (openBtn) {
-	                openBtn.addEventListener('click', function() {
-	                    loadReservationsEnAttente();
-	                });
-	            }
+        <!-- Indicateurs clés -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-12">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                                    <i class="bi bi-journal-check text-success" style="font-size: 1.5rem;"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted small">Prêts à retirer</div>
+                                    <div class="h5 mb-0" id="countPretsARetirer">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                                    <i class="bi bi-eye text-primary" style="font-size: 1.5rem;"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted small">Prêts en cours</div>
+                                    <div class="h5 mb-0" id="countPretsEnCours">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                                    <i class="bi bi-exclamation-octagon text-danger" style="font-size: 1.5rem;"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted small">Prêts bloqués</div>
+                                    <div class="h5 mb-0" id="countPretsBloques">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenu principal et barre latérale -->
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <!-- Prêts bloqués (Priorité haute) -->
+                <div class="card shadow-lg border-0 mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0"><i class="bi bi-exclamation-octagon me-2"></i>Prêts bloqués</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Ressource</th>
+                                        <th>Usager</th>
+                                        <th>Date emprunt</th>
+                                        <th>Retour prévu</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pretsBloquesTbody">
+                                    <tr><td colspan="5" class="text-center text-muted">Chargement...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="pretsBloquesEmpty" class="alert alert-info d-none">
+                            <i class="bi bi-info-circle me-2"></i>Aucun prêt bloqué à afficher.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prêts à retirer -->
+                <div class="card shadow-lg border-0 mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-journal-check me-2"></i>Prêts à retirer (Empruntés)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Ressource</th>
+                                        <th>Usager</th>
+                                        <th>Date emprunt</th>
+                                        <th>Retour prévu</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pretsEmprunteTbody">
+                                    <tr><td colspan="5" class="text-center text-muted">Chargement...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="pretsEmprunteEmpty" class="alert alert-info d-none">
+                            <i class="bi bi-info-circle me-2"></i>Aucun prêt à retirer.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prêts en cours -->
+                <div class="card shadow-lg border-0 mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-eye me-2"></i>Prêts en cours</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Ressource</th>
+                                        <th>Usager</th>
+                                        <th>Date emprunt</th>
+                                        <th>Retour prévu</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pretsEnCoursTbody">
+                                    <tr><td colspan="5" class="text-center text-muted">Chargement...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="pretsEnCoursEmpty" class="alert alert-info d-none">
+                            <i class="bi bi-info-circle me-2"></i>Aucun prêt en cours.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <!-- Actions rapides -->
+                <div class="card shadow-lg border-0 mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Actions rapides</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <a th:href="@{/ressources/new}" class="list-group-item list-group-item-action d-flex align-items-center p-3">
+                            <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                                <i class="bi bi-plus-circle text-info"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">Ajouter une ressource</div>
+                                <small class="text-muted">Nouveau livre, DVD, etc.</small>
+                            </div>
+                        </a>
+                        <button class="list-group-item list-group-item-action d-flex align-items-center p-3" data-bs-toggle="modal" data-bs-target="#reservationsModal">
+                            <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                                <i class="bi bi-bell text-warning"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold">Réservations</div>
+                                <small class="text-muted">Gérer les demandes</small>
+                            </div>
+                            <span id="notifCountInline" class="badge bg-danger rounded-pill">0</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Informations du compte -->
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Mon Compte</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-borderless mb-0">
+                            <tr>
+                                <td class="text-muted ps-0">Nom:</td>
+                                <td class="text-end pe-0 fw-semibold" th:text="${user.nomComplet}">Nom</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted ps-0">Email:</td>
+                                <td class="text-end pe-0" th:text="${user.email}">email</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted ps-0">Bibliothèque:</td>
+                                <td class="text-end pe-0" th:if="${user.bibliotheque != null}" th:text="${user.bibliotheque.nom}">Biblio</td>
+                                <td class="text-end pe-0" th:unless="${user.bibliotheque != null}">-</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    
+    <style>
+        .animate-fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+    
+    <script th:inline="javascript">
+        const BIB_ID = [[${user.bibliotheque != null ? user.bibliotheque.id : null}]];
+        
+        // Fonction pour mettre à jour les compteurs
+        function updateCounter(id, count) {
+            const el = document.getElementById(id);
+            if(el) el.textContent = count;
+        }
+
+        async function loadPretsEmprunte() {
+            try {
+                const resp = await fetch('/api/prets/a-retirer', { headers: { 'Accept': 'application/json' } });
+                const data = await resp.json();
+                const tbody = document.getElementById('pretsEmprunteTbody');
+                const empty = document.getElementById('pretsEmprunteEmpty');
+                
+                const items = Array.isArray(data.items) ? data.items : [];
+                // Filter and count
+                const rowsData = items.filter(it => it.statut === 'EMPRUNTE');
+                updateCounter('countPretsARetirer', rowsData.length);
+
+                if (!tbody) return;
+                
+                const rows = rowsData.map(it => {
+                    const titre = it.ressource && it.ressource.titre ? it.ressource.titre : 'Ressource';
+                    const usager = it.utilisateur ? `${it.utilisateur.prenom || ''} ${it.utilisateur.nom || ''}`.trim() : '';
+                    const dateEmprunt = it.dateEmprunt ? new Date(it.dateEmprunt) : null;
+                    const dateRetourPrevu = it.dateRetourPrevu ? new Date(it.dateRetourPrevu) : (it.deadlineRetrait ? new Date(it.deadlineRetrait) : null);
+                    const fmtDT = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '-';
+                    const fmtD = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '-';
+                    return `
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">${titre}</div>
+                                <div class="text-muted small">${it.ressource && it.ressource.auteur ? it.ressource.auteur : ''}</div>
+                            </td>
+                            <td>${usager}</td>
+                            <td>${fmtDT(dateEmprunt)}</td>
+                            <td>${fmtD(dateRetourPrevu)}</td>
+                            <td class="text-nowrap">
+                                <button class="btn btn-sm btn-outline-primary" onclick="relancerPret(${it.id})">📧 Relancer</button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="annulerPret(${it.id})">❌ Annuler</button>
+                                <button class="btn btn-sm btn-success" onclick="confirmerRetraitPret(${it.id})">✅ Confirmer retrait</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                if (rows.length === 0) {
+                    tbody.innerHTML = '';
+                    if (empty) empty.classList.remove('d-none');
+                } else {
+                    tbody.innerHTML = rows.join('');
+                    if (empty) empty.classList.add('d-none');
+                }
+            } catch (e) {
+                const tbody = document.getElementById('pretsEmprunteTbody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur de chargement</td></tr>';
+            }
+        }
+        
+        async function confirmerRetraitPret(id) {
+            const btns = document.querySelectorAll(`button[onclick="confirmerRetraitPret(${id})"]`);
+            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+            try {
+                const resp = await fetch(`/api/prets/${id}/en-cours`, {
+                    method: 'PUT',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await resp.json();
+                if (data && data.success) {
+                    await loadPretsEmprunte();
+                    // Also refresh active loans as it moved there
+                    await loadPretsEnCours(); 
+                } else {
+                    btns.forEach(b => { b.disabled = false; b.textContent = '✅ Confirmer retrait'; });
+                }
+            } catch (_) {
+                btns.forEach(b => { b.disabled = false; b.textContent = '✅ Confirmer retrait'; });
+            }
+        }
+        
+        async function relancerPret(id) {
+            const btns = document.querySelectorAll(`button[onclick="relancerPret(${id})"]`);
+            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+            try {
+                const resp = await fetch(`/api/prets/${id}/relancer`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await resp.json();
+                btns.forEach(b => { b.disabled = false; b.textContent = '📧 Relancer'; });
+            } catch (_) {
+                btns.forEach(b => { b.disabled = false; b.textContent = '📧 Relancer'; });
+            }
+        }
+        
+        async function annulerPret(id) {
+            const btns = document.querySelectorAll(`button[onclick="annulerPret(${id})"]`);
+            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+            try {
+                const resp = await fetch(`/api/prets/${id}/annuler`, {
+                    method: 'PUT',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await resp.json();
+                if (data && data.success) {
+                    await loadPretsEmprunte();
+                } else {
+                    btns.forEach(b => { b.disabled = false; b.textContent = '❌ Annuler'; });
+                }
+            } catch (_) {
+                btns.forEach(b => { b.disabled = false; b.textContent = '❌ Annuler'; });
+            }
+        }
+        
+        async function loadReservationsEnAttente() {
+            try {
+                const resp = await fetch('/api/reservations/en-attente', {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await resp.json();
+                const list = document.getElementById('reservationsList');
+                const countBadge = document.getElementById('notifCount');
+                const inlineBadge = document.getElementById('notifCountInline');
+                const total = (data && data.total) ? data.total : 
+                              (data && data.reservations ? data.reservations.length : 0);
+                
+                if (countBadge) {
+                    if (total > 0) {
+                        countBadge.style.display = 'inline';
+                        countBadge.textContent = '' + total;
+                    } else {
+                        countBadge.style.display = 'none';
+                    }
+                }
+                if (inlineBadge) {
+                    inlineBadge.textContent = '' + total;
+                    inlineBadge.classList.toggle('bg-danger', total > 0);
+                    inlineBadge.classList.toggle('bg-secondary', total === 0);
+                }
+
+                if (!list) return;
+                if (data.success && Array.isArray(data.reservations) && data.reservations.length > 0) {
+                    list.innerHTML = data.reservations.map(item => {
+                        const titre = (item.ressource && item.ressource.titre) ? item.ressource.titre : 'Ressource';
+                        const auteur = (item.ressource && item.ressource.auteur) ? item.ressource.auteur : '';
+                        const usagerNom = (item.usager && item.usager.nom) ? item.usager.nom : '';
+                        const usagerPrenom = (item.usager && item.usager.prenom) ? item.usager.prenom : '';
+                        const dateDemande = item.dateDemande || '';
+                        return `
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="ms-2 me-auto">
+                                        <div class="fw-semibold">${titre}${auteur ? ' — ' + auteur : ''}</div>
+                                        <small class="text-muted">Usager: ${usagerPrenom} ${usagerNom} · Demande: ${dateDemande}</small>
+                                    </div>
+                                    <span class="badge bg-warning text-dark">En attente</span>
+                                </div>
+                                <div class="mt-2 d-flex gap-2 justify-content-end">
+                                    <button class="btn btn-sm btn-success" onclick="confirmReservation(${item.id})">
+                                        <i class="bi bi-check2 me-1"></i>Confirmer
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="rejectReservation(${item.id})">
+                                        <i class="bi bi-x me-1"></i>Rejeter
+                                    </button>
+                                </div>
+                            </li>
+                        `;
+                    }).join('');
+                } else {
+                    list.innerHTML = '<li class="list-group-item text-muted">Aucune réservation en attente</li>';
+                }
+            } catch (e) {
+                const list = document.getElementById('reservationsList');
+                if (list) list.innerHTML = '<li class="list-group-item text-danger">Erreur de chargement des réservations</li>';
+            }
+        }
+        
+        function connectReservationsWS() {
+            if (!BIB_ID) return;
+            const socket = new SockJS('/ws');
+            const client = Stomp.over(socket);
+            client.debug = null;
+            client.connect({}, function() {
+                client.subscribe('/topic/reservations/en-attente/' + BIB_ID, function(message) {
+                    loadReservationsEnAttente();
+                });
+            });
+        }
+        
+        async function confirmReservation(id) {
+            try {
+                const commentaire = window.prompt('Commentaire (optionnel) :', '');
+                const resp = await fetch('/api/reservations/' + id + '/confirmer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ commentaire })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    loadReservationsEnAttente();
+                } else {
+                    alert('Erreur de confirmation: ' + (data.error || data.message || ''));
+                }
+            } catch (e) {
+                alert('Erreur de confirmation: ' + e.message);
+            }
+        }
+        
+        async function rejectReservation(id) {
+            try {
+                const raison = window.prompt('Raison du rejet :', '');
+                const resp = await fetch('/api/reservations/' + id + '/rejeter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ raison })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    loadReservationsEnAttente();
+                } else {
+                    alert('Erreur de rejet: ' + (data.error || data.message || ''));
+                }
+            } catch (e) {
+                alert('Erreur de rejet: ' + e.message);
+            }
+        }
+        
+        async function loadPretsEnCours() {
+            try {
+                const resp = await fetch('/api/prets/en-cours', { headers: { 'Accept': 'application/json' } });
+                const data = await resp.json();
+                const tbody = document.getElementById('pretsEnCoursTbody');
+                const empty = document.getElementById('pretsEnCoursEmpty');
+                
+                const items = Array.isArray(data.items) ? data.items : [];
+                const rowsData = items.filter(it => it.statut === 'EN_COURS');
+                updateCounter('countPretsEnCours', rowsData.length);
+
+                if (!tbody) return;
+                
+                const rows = rowsData.map(it => {
+                    const titre = it.ressource && it.ressource.titre ? it.ressource.titre : 'Ressource';
+                    const auteur = it.ressource && it.ressource.auteur ? it.ressource.auteur : '';
+                    const usager = it.utilisateur ? `${it.utilisateur.prenom || ''} ${it.utilisateur.nom || ''}`.trim() : '';
+                    const dateEmprunt = it.dateEmprunt ? new Date(it.dateEmprunt) : null;
+                    const dateRetourPrevu = it.dateRetourPrevu ? new Date(it.dateRetourPrevu) : null;
+                    const fmtDT = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '-';
+                    const fmtD = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '-';
+                    return `
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">${titre}</div>
+                                <div class="text-muted small">${auteur}</div>
+                            </td>
+                            <td>${usager}</td>
+                            <td>${fmtDT(dateEmprunt)}</td>
+                            <td>${fmtD(dateRetourPrevu)}</td>
+                            <td class="text-nowrap">
+                                <button class="btn btn-sm btn-outline-secondary"
+                                    data-pret-id="${it.id}"
+                                    data-titre="${titre}"
+                                    data-auteur="${auteur}"
+                                    data-usager="${usager}"
+                                    data-statut="${it.statut}"
+                                    data-date-emprunt="${fmtDT(dateEmprunt)}"
+                                    data-date-retour-prevu="${fmtD(dateRetourPrevu)}"
+                                    onclick="voirPret(this)">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="retournerPret(${it.id})">Retourné</button>
+                                <button class="btn btn-sm btn-outline-warning" onclick="marquerNonRetourne(${it.id})">Non retourné</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                if (rows.length === 0) {
+                    tbody.innerHTML = '';
+                    if (empty) empty.classList.remove('d-none');
+                } else {
+                    tbody.innerHTML = rows.join('');
+                    if (empty) empty.classList.add('d-none');
+                }
+            } catch (e) {
+                const tbody = document.getElementById('pretsEnCoursTbody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur de chargement</td></tr>';
+            }
+        }
+        
+        async function loadPretsBloques() {
+            try {
+                const resp = await fetch('/api/prets/bloques', { headers: { 'Accept': 'application/json' } });
+                const data = await resp.json();
+                const tbody = document.getElementById('pretsBloquesTbody');
+                const empty = document.getElementById('pretsBloquesEmpty');
+                
+                const items = Array.isArray(data.items) ? data.items : [];
+                const rowsData = items.filter(it => it.statut === 'BLOQUE');
+                updateCounter('countPretsBloques', rowsData.length);
+
+                if (!tbody) return;
+                
+                const rows = rowsData.map(it => {
+                    const titre = it.ressource && it.ressource.titre ? it.ressource.titre : 'Ressource';
+                    const auteur = it.ressource && it.ressource.auteur ? it.ressource.auteur : '';
+                    const usager = it.utilisateur ? `${it.utilisateur.prenom || ''} ${it.utilisateur.nom || ''}`.trim() : '';
+                    const dateEmprunt = it.dateEmprunt ? new Date(it.dateEmprunt) : null;
+                    const dateRetourPrevu = it.dateRetourPrevu ? new Date(it.dateRetourPrevu) : null;
+                    const fmtDT = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '-';
+                    const fmtD = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '-';
+                    return `
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">${titre}</div>
+                                <div class="text-muted small">${auteur}</div>
+                            </td>
+                            <td>${usager}</td>
+                            <td>${fmtDT(dateEmprunt)}</td>
+                            <td>${fmtD(dateRetourPrevu)}</td>
+                            <td class="text-nowrap">
+                                <button class="btn btn-sm btn-outline-secondary"
+                                    data-pret-id="${it.id}"
+                                    data-titre="${titre}"
+                                    data-auteur="${auteur}"
+                                    data-usager="${usager}"
+                                    data-statut="${it.statut}"
+                                    data-date-emprunt="${fmtDT(dateEmprunt)}"
+                                    data-date-retour-prevu="${fmtD(dateRetourPrevu)}"
+                                    onclick="voirPret(this)">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="cloturerPret(${it.id})">Clôturer</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                if (rows.length === 0) {
+                    tbody.innerHTML = '';
+                    if (empty) empty.classList.remove('d-none');
+                } else {
+                    tbody.innerHTML = rows.join('');
+                    if (empty) empty.classList.add('d-none');
+                }
+            } catch (e) {
+                const tbody = document.getElementById('pretsBloquesTbody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur de chargement</td></tr>';
+            }
+        }
+        
+        async function cloturerPret(id) {
+            const btns = document.querySelectorAll(`button[onclick="cloturerPret(${id})"]`);
+            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+            try {
+                const resp = await fetch(`/api/prets/${id}/cloture`, {
+                    method: 'PUT',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await resp.json();
+                if (data && data.success) {
+                    await loadPretsBloques();
+                } else {
+                    btns.forEach(b => { b.disabled = false; b.textContent = 'Clôturer'; });
+                }
+            } catch (_) {
+                btns.forEach(b => { b.disabled = false; b.textContent = 'Clôturer'; });
+            }
+        }
+        
+        async function retournerPret(id) {
+            const btns = document.querySelectorAll(`button[onclick="retournerPret(${id})"]`);
+            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+            try {
+                const resp = await fetch(`/api/prets/${id}/retour`, {
+                    method: 'PUT',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await resp.json();
+                if (data && data.success) {
+                    await loadPretsEnCours();
+                } else {
+                    btns.forEach(b => { b.disabled = false; b.textContent = 'Retourné'; });
+                }
+            } catch (_) {
+                btns.forEach(b => { b.disabled = false; b.textContent = 'Retourné'; });
+            }
+        }
+        
+        async function marquerNonRetourne(id) {
+            const btns = document.querySelectorAll(`button[onclick="marquerNonRetourne(${id})"]`);
+            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
+            try {
+                const resp = await fetch(`/api/prets/${id}/non-retourne`, {
+                    method: 'PUT',
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await resp.json();
+                if (data && data.success) {
+                    await loadPretsEnCours();
+                } else {
+                    btns.forEach(b => { b.disabled = false; b.textContent = 'Non retourné'; });
+                }
+            } catch (_) {
+                btns.forEach(b => { b.disabled = false; b.textContent = 'Non retourné'; });
+            }
+        }
+        
+        function voirPret(el) {
+            const modalEl = document.getElementById('pretDetailModal');
+            if (!modalEl) return;
+            modalEl.querySelector('[data-field="titre"]').textContent = el.getAttribute('data-titre') || '';
+            modalEl.querySelector('[data-field="auteur"]').textContent = el.getAttribute('data-auteur') || '';
+            modalEl.querySelector('[data-field="usager"]').textContent = el.getAttribute('data-usager') || '';
+            modalEl.querySelector('[data-field="statut"]').textContent = el.getAttribute('data-statut') || '';
+            modalEl.querySelector('[data-field="dateEmprunt"]').textContent = el.getAttribute('data-date-emprunt') || '';
+            modalEl.querySelector('[data-field="dateRetourPrevu"]').textContent = el.getAttribute('data-date-retour-prevu') || '';
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const notifLink = document.getElementById('notificationsLink');
+            if (notifLink) {
+                notifLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const modalEl = document.getElementById('reservationsModal');
+                    if (modalEl) {
+                        const modal = new bootstrap.Modal(modalEl);
+                        modal.show();
+                        loadReservationsEnAttente();
+                    }
+                });
+            }
+            const openBtn = document.getElementById('openReservationsModal');
+            if (openBtn) {
+                openBtn.addEventListener('click', function() {
+                    loadReservationsEnAttente();
+                });
+            }
             loadReservationsEnAttente();
             connectReservationsWS();
             loadPretsEmprunte();
             loadPretsEnCours();
             loadPretsBloques();
-	            
-	            const toastElements = document.querySelectorAll('.toast');
-	            if (toastElements.length > 0) {
-	                toastElements.forEach(function(toastEl) {
-	                    if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
-	                        const toast = new bootstrap.Toast(toastEl, {
-	                            autohide: true,
-	                            delay: 5000
-	                        });
-	                        toast.show();
-	                    } else {
-	                        toastEl.classList.add('show');
-	                    }
-	                });
-	            }
-	        });
-	    </script>
-	    
-	    <div class="modal fade" id="reservationsModal" tabindex="-1" aria-labelledby="reservationsModalLabel" aria-hidden="true">
-	        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-	            <div class="modal-content">
-	                <div class="modal-header">
-	                    <h5 class="modal-title" id="reservationsModalLabel">
-	                        <i class="bi bi-bell me-2"></i>Réservations en attente
-	                    </h5>
-	                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-	                </div>
-	                <div class="modal-body p-0">
-	                    <ul class="list-group list-group-flush" id="reservationsList">
-	                        <li class="list-group-item text-muted">Chargement...</li>
-	                    </ul>
-	                </div>
-	                <div class="modal-footer">
-	                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-	                </div>
-	            </div>
-	        </div>
-	    </div>
-	    
-	    <script th:inline="javascript">
-        async function loadPretsEnCours() {
-	            try {
-	                const resp = await fetch('/api/prets/en-cours', { headers: { 'Accept': 'application/json' } });
-	                const data = await resp.json();
-	                const tbody = document.getElementById('pretsEnCoursTbody');
-	                const empty = document.getElementById('pretsEnCoursEmpty');
-	                if (!tbody) return;
-	                const items = Array.isArray(data.items) ? data.items : [];
-	                const rows = items.filter(it => it.statut === 'EN_COURS').map(it => {
-	                    const titre = it.ressource && it.ressource.titre ? it.ressource.titre : 'Ressource';
-	                    const auteur = it.ressource && it.ressource.auteur ? it.ressource.auteur : '';
-	                    const usager = it.utilisateur ? `${it.utilisateur.prenom || ''} ${it.utilisateur.nom || ''}`.trim() : '';
-	                    const dateEmprunt = it.dateEmprunt ? new Date(it.dateEmprunt) : null;
-	                    const dateRetourPrevu = it.dateRetourPrevu ? new Date(it.dateRetourPrevu) : null;
-	                    const fmtDT = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '-';
-	                    const fmtD = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '-';
-	                    return `
-	                        <tr>
-	                            <td>
-	                                <div class="fw-semibold">${titre}</div>
-	                                <div class="text-muted small">${auteur}</div>
-	                            </td>
-	                            <td>${usager}</td>
-	                            <td>${fmtDT(dateEmprunt)}</td>
-	                            <td>${fmtD(dateRetourPrevu)}</td>
-	                            <td class="text-nowrap">
-	                                <button class="btn btn-sm btn-outline-secondary"
-	                                    data-pret-id="${it.id}"
-	                                    data-titre="${titre}"
-	                                    data-auteur="${auteur}"
-	                                    data-usager="${usager}"
-	                                    data-statut="${it.statut}"
-	                                    data-date-emprunt="${fmtDT(dateEmprunt)}"
-	                                    data-date-retour-prevu="${fmtD(dateRetourPrevu)}"
-	                                    onclick="voirPret(this)">
-	                                    <i class="bi bi-eye"></i>
-	                                </button>
-	                                <button class="btn btn-sm btn-success" onclick="retournerPret(${it.id})">Retourné</button>
-	                                <button class="btn btn-sm btn-outline-warning" onclick="marquerNonRetourne(${it.id})">Non retourné</button>
-	                            </td>
-	                        </tr>
-	                    `;
-	                });
-	                if (rows.length === 0) {
-	                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Aucun prêt en cours à afficher.</td></tr>';
-	                    if (empty) empty.classList.remove('d-none');
-	                } else {
-	                    tbody.innerHTML = rows.join('');
-	                    if (empty) empty.classList.add('d-none');
-        }
-	            } catch (e) {
-	                const tbody = document.getElementById('pretsEnCoursTbody');
-	                if (tbody) {
-	                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur de chargement</td></tr>';
-	                }
-	            }
-	        }
-	        
-	        async function loadPretsBloques() {
-	            try {
-	                const resp = await fetch('/api/prets/bloques', { headers: { 'Accept': 'application/json' } });
-	                const data = await resp.json();
-	                const tbody = document.getElementById('pretsBloquesTbody');
-	                const empty = document.getElementById('pretsBloquesEmpty');
-	                if (!tbody) return;
-	                const items = Array.isArray(data.items) ? data.items : [];
-	                const rows = items.filter(it => it.statut === 'BLOQUE').map(it => {
-	                    const titre = it.ressource && it.ressource.titre ? it.ressource.titre : 'Ressource';
-	                    const auteur = it.ressource && it.ressource.auteur ? it.ressource.auteur : '';
-	                    const usager = it.utilisateur ? `${it.utilisateur.prenom || ''} ${it.utilisateur.nom || ''}`.trim() : '';
-	                    const dateEmprunt = it.dateEmprunt ? new Date(it.dateEmprunt) : null;
-	                    const dateRetourPrevu = it.dateRetourPrevu ? new Date(it.dateRetourPrevu) : null;
-	                    const fmtDT = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '-';
-	                    const fmtD = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '-';
-	                    return `
-	                        <tr>
-	                            <td>
-	                                <div class="fw-semibold">${titre}</div>
-	                                <div class="text-muted small">${auteur}</div>
-	                            </td>
-	                            <td>${usager}</td>
-	                            <td>${fmtDT(dateEmprunt)}</td>
-	                            <td>${fmtD(dateRetourPrevu)}</td>
-	                            <td class="text-nowrap">
-	                                <button class="btn btn-sm btn-outline-secondary"
-	                                    data-pret-id="${it.id}"
-	                                    data-titre="${titre}"
-	                                    data-auteur="${auteur}"
-	                                    data-usager="${usager}"
-	                                    data-statut="${it.statut}"
-	                                    data-date-emprunt="${fmtDT(dateEmprunt)}"
-	                                    data-date-retour-prevu="${fmtD(dateRetourPrevu)}"
-	                                    onclick="voirPret(this)">
-	                                    <i class="bi bi-eye"></i>
-	                                </button>
-	                                <button class="btn btn-sm btn-danger" onclick="cloturerPret(${it.id})">Clôturer</button>
-	                            </td>
-	                        </tr>
-	                    `;
-	                });
-	                if (rows.length === 0) {
-	                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Aucun prêt bloqué à afficher.</td></tr>';
-	                    if (empty) empty.classList.remove('d-none');
-	                } else {
-	                    tbody.innerHTML = rows.join('');
-	                    if (empty) empty.classList.add('d-none');
-	                }
-	            } catch (e) {
-	                const tbody = document.getElementById('pretsBloquesTbody');
-	                if (tbody) {
-	                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur de chargement</td></tr>';
-	                }
-	            }
-	        }
-	        
-	        async function cloturerPret(id) {
-	            const btns = document.querySelectorAll(`button[onclick="cloturerPret(${id})"]`);
-	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
-	            try {
-	                const resp = await fetch(`/api/prets/${id}/cloture`, {
-	                    method: 'PUT',
-	                    headers: { 'Accept': 'application/json' }
-	                });
-	                const data = await resp.json();
-	                if (data && data.success) {
-	                    await loadPretsBloques();
-	                } else {
-	                    btns.forEach(b => { b.disabled = false; b.textContent = 'Clôturer'; });
-	                }
-	            } catch (_) {
-	                btns.forEach(b => { b.disabled = false; b.textContent = 'Clôturer'; });
-	            }
-	        }
-	        
-	        async function retournerPret(id) {
-	            const btns = document.querySelectorAll(`button[onclick="retournerPret(${id})"]`);
-	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
-	            try {
-	                const resp = await fetch(`/api/prets/${id}/retour`, {
-	                    method: 'PUT',
-	                    headers: { 'Accept': 'application/json' }
-	                });
-	                const data = await resp.json();
-	                if (data && data.success) {
-	                    await loadPretsEnCours();
-	                } else {
-	                    btns.forEach(b => { b.disabled = false; b.textContent = 'Retourné'; });
-	                }
-	            } catch (_) {
-	                btns.forEach(b => { b.disabled = false; b.textContent = 'Retourné'; });
-	            }
-	        }
-	        
-	        async function marquerNonRetourne(id) {
-	            const btns = document.querySelectorAll(`button[onclick="marquerNonRetourne(${id})"]`);
-	            btns.forEach(b => { b.disabled = true; b.textContent = '⏳'; });
-	            try {
-	                const resp = await fetch(`/api/prets/${id}/non-retourne`, {
-	                    method: 'PUT',
-	                    headers: { 'Accept': 'application/json' }
-	                });
-	                const data = await resp.json();
-	                if (data && data.success) {
-	                    await loadPretsEnCours();
-	                } else {
-	                    btns.forEach(b => { b.disabled = false; b.textContent = 'Non retourné'; });
-	                }
-	            } catch (_) {
-	                btns.forEach(b => { b.disabled = false; b.textContent = 'Non retourné'; });
-	            }
-	        }
-	        
-	        function voirPret(el) {
-	            const modalEl = document.getElementById('pretDetailModal');
-	            if (!modalEl) return;
-	            modalEl.querySelector('[data-field="titre"]').textContent = el.getAttribute('data-titre') || '';
-	            modalEl.querySelector('[data-field="auteur"]').textContent = el.getAttribute('data-auteur') || '';
-	            modalEl.querySelector('[data-field="usager"]').textContent = el.getAttribute('data-usager') || '';
-	            modalEl.querySelector('[data-field="statut"]').textContent = el.getAttribute('data-statut') || '';
-	            modalEl.querySelector('[data-field="dateEmprunt"]').textContent = el.getAttribute('data-date-emprunt') || '';
-	            modalEl.querySelector('[data-field="dateRetourPrevu"]').textContent = el.getAttribute('data-date-retour-prevu') || '';
-	            const modal = new bootstrap.Modal(modalEl);
-	            modal.show();
-	        }
-	    </script>
-	    
-	    <div class="modal fade" id="pretDetailModal" tabindex="-1" aria-labelledby="pretDetailModalLabel" aria-hidden="true">
-	        <div class="modal-dialog">
-	            <div class="modal-content">
-	                <div class="modal-header">
-	                    <h5 class="modal-title" id="pretDetailModalLabel"><i class="bi bi-eye me-2"></i>Détails du prêt</h5>
-	                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-	                </div>
-	                <div class="modal-body">
-	                    <div class="mb-2"><strong>Ressource:</strong> <span data-field="titre"></span></div>
-	                    <div class="mb-2"><strong>Auteur:</strong> <span data-field="auteur"></span></div>
-	                    <div class="mb-2"><strong>Usager:</strong> <span data-field="usager"></span></div>
-	                    <div class="mb-2"><strong>Statut:</strong> <span data-field="statut"></span></div>
-	                    <div class="mb-2"><strong>Date emprunt:</strong> <span data-field="dateEmprunt"></span></div>
-	                    <div class="mb-2"><strong>Retour prévu:</strong> <span data-field="dateRetourPrevu"></span></div>
-	                </div>
-	                <div class="modal-footer">
-	                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-	                </div>
-	            </div>
-	        </div>
-	    </div>
-	</body>
-	</html>
+            
+            const toastElements = document.querySelectorAll('.toast');
+            if (toastElements.length > 0) {
+                toastElements.forEach(function(toastEl) {
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+                        const toast = new bootstrap.Toast(toastEl, {
+                            autohide: true,
+                            delay: 5000
+                        });
+                        toast.show();
+                    } else {
+                        toastEl.classList.add('show');
+                    }
+                });
+            }
+        });
+    </script>
+    
+    <div class="modal fade" id="reservationsModal" tabindex="-1" aria-labelledby="reservationsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reservationsModalLabel">
+                        <i class="bi bi-bell me-2"></i>Réservations en attente
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <ul class="list-group list-group-flush" id="reservationsList">
+                        <li class="list-group-item text-muted">Chargement...</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="pretDetailModal" tabindex="-1" aria-labelledby="pretDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="pretDetailModalLabel"><i class="bi bi-eye me-2"></i>Détails du prêt</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2"><strong>Ressource:</strong> <span data-field="titre"></span></div>
+                    <div class="mb-2"><strong>Auteur:</strong> <span data-field="auteur"></span></div>
+                    <div class="mb-2"><strong>Usager:</strong> <span data-field="usager"></span></div>
+                    <div class="mb-2"><strong>Statut:</strong> <span data-field="statut"></span></div>
+                    <div class="mb-2"><strong>Date emprunt:</strong> <span data-field="dateEmprunt"></span></div>
+                    <div class="mb-2"><strong>Retour prévu:</strong> <span data-field="dateRetourPrevu"></span></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
