@@ -76,7 +76,7 @@ Lors du premier démarrage, un compte **Super Administrateur** est créé automa
 *   **Email :** `superadmin@biblio.com`
 *   **Mot de passe :** `admin123`
 
-> ⚠️ **Important :** Pour des raisons de sécurité, veuillez changer ce mot de passe dès votre première connexion.
+
 
 ## 🗺️ Structure du Projet
 
