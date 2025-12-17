@@ -142,4 +142,84 @@ class RessourceServiceTest {
         assertNotNull(result);
         verify(ressourceDAO, never()).sumNombreExemplairesByBibliothequeId(any());
     }
+
+    @Test
+    void updateRessource_ShouldThrow_WhenDifferentLibrary() {
+        String email = "biblio@test.com";
+        Bibliotheque lib1 = Bibliotheque.builder().id(1L).nom("Lib 1").capaciteStock(20).build();
+        Bibliotheque lib2 = Bibliotheque.builder().id(2L).nom("Lib 2").capaciteStock(20).build();
+
+        User user = User.builder()
+                .email(email)
+                .role(Role.BIBLIOTHECAIRE)
+                .bibliotheque(lib2)
+                .build();
+
+        Ressource ressource = Ressource.builder()
+                .id(10L)
+                .titre("Ancien")
+                .auteur("Auteur")
+                .categorie(Categorie.LITTERATURE)
+                .typeRessource(TypeRessource.LIVRE)
+                .nombreExemplaires(3)
+                .exemplairesDisponibles(3)
+                .bibliotheque(lib1)
+                .build();
+
+        when(userDAO.findByEmail(email)).thenReturn(Optional.of(user));
+        when(ressourceDAO.findById(10L)).thenReturn(Optional.of(ressource));
+
+        Exception ex = assertThrows(IllegalStateException.class, () -> {
+            ressourceService.updateRessource(
+                    10L, "Nouveau", null, null, null, null,
+                    null, null, null, null, null, null, email
+            );
+        });
+        assertTrue(ex.getMessage().contains("ressources de votre bibliothèque"));
+    }
+
+    @Test
+    void updateRessource_ShouldValidateCapacity_OnNombreExemplairesChange() {
+        String email = "biblio@test.com";
+        Bibliotheque lib = Bibliotheque.builder().id(1L).nom("Lib").capaciteStock(10).build();
+
+        User user = User.builder()
+                .email(email)
+                .role(Role.BIBLIOTHECAIRE)
+                .bibliotheque(lib)
+                .build();
+
+        Ressource ressource = Ressource.builder()
+                .id(10L)
+                .titre("Ancien")
+                .auteur("Auteur")
+                .categorie(Categorie.LITTERATURE)
+                .typeRessource(TypeRessource.LIVRE)
+                .nombreExemplaires(3)
+                .exemplairesDisponibles(3)
+                .bibliotheque(lib)
+                .build();
+
+        when(userDAO.findByEmail(email)).thenReturn(Optional.of(user));
+        when(ressourceDAO.findById(10L)).thenReturn(Optional.of(ressource));
+        when(ressourceDAO.sumNombreExemplairesByBibliothequeId(1L)).thenReturn(8);
+
+        Exception ex = assertThrows(IllegalArgumentException.class, () -> {
+            // newTotal = 8 - 3 + 6 = 11 > 10 -> should throw
+            ressourceService.updateRessource(
+                    10L, null, null, null, null, null,
+                    null, null, null, 6, null, null, email
+            );
+        });
+        assertTrue(ex.getMessage().contains("capacité de stockage"));
+
+        // Now acceptable change: newTotal = 8 - 3 + 5 = 10
+        when(ressourceDAO.sumNombreExemplairesByBibliothequeId(1L)).thenReturn(8);
+        when(ressourceDAO.save(any(Ressource.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        Ressource updated = ressourceService.updateRessource(
+                10L, null, null, null, null, null,
+                null, null, null, 5, null, null, email
+        );
+        assertEquals(5, updated.getNombreExemplaires());
+    }
 }
