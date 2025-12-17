@@ -41,11 +41,9 @@
                         <a th:href="@{/user/profile}" class="btn btn-outline-danger me-2">
                             <i class="bi bi-person-gear me-2"></i>Mon Profil
                         </a>
-                        <form th:action="@{/logout}" method="post" style="display: inline;">
-                            <button type="submit" class="btn btn-outline-secondary">
-                                <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
-                            </button>
-                        </form>
+                        <a href="/login?logout" class="btn btn-outline-secondary" id="logoutLink">
+                            <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
+                        </a>
                     </div>
                 </div>
             </div>
@@ -128,6 +126,12 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="bibliotheques-tab" data-bs-toggle="tab" data-bs-target="#bibliotheques" 
+                        type="button" role="tab">
+                    <i class="bi bi-building me-2"></i>Gestion des Bibliothèques
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs" 
                         type="button" role="tab">
                     <i class="bi bi-file-earmark-text me-2"></i>Logs Système
@@ -156,7 +160,7 @@
                                         <th>ID</th>
                                         <th>Nom</th>
                                         <th>Email</th>
-                                        <th>Rôle</th>
+                                        <th>Rôle / Bibliothèque</th>
                                         <th>Statut</th>
                                         <th>Email Vérifié</th>
                                         <th>Date Inscription</th>
@@ -173,8 +177,6 @@
                                     </tr>
                                 </tbody>
                             </table>
-<<<<<<< HEAD
-=======
                             <div class="d-flex justify-content-between align-items-center mt-2" id="usersPagination">
                                 <div>
                                     <small class="text-muted">Page <span id="usersPageNum">1</span>/<span id="usersTotalPages">1</span></small>
@@ -234,7 +236,6 @@
                                     <button class="btn btn-outline-secondary" id="biblioNextBtn">Suivant</button>
                                 </div>
                             </div>
->>>>>>> dbdcc84162f79c74609dd5dd85001dcf31f27674
                         </div>
                     </div>
                 </div>
@@ -310,17 +311,125 @@
                         </div>
                         <div class="mb-3">
                             <label for="userRole" class="form-label">Rôle *</label>
-                            <select class="form-select" id="userRole" required>
+                            <select class="form-select" id="userRole" required onchange="toggleBibliothequeField()">
                                 <option value="">Sélectionner un rôle</option>
-                                <option value="ADMIN">Administrateur</option>
+                                <option value="ADMIN">Administrateur de bibliothèque</option>
                                 <option value="BIBLIOTHECAIRE">Bibliothécaire</option>
                             </select>
+                        </div>
+                        <div class="mb-3" id="bibliothequeField" style="display: none;">
+                            <label for="userBibliotheque" class="form-label">Bibliothèque *</label>
+                            <select class="form-select" id="userBibliotheque" required>
+                                <option value="">Sélectionner une bibliothèque</option>
+                            </select>
+                            <small class="text-muted">Obligatoire pour les administrateurs et bibliothécaires</small>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                         <button type="submit" class="btn btn-danger">
                             <i class="bi bi-check-circle me-2"></i>Créer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour créer une bibliothèque -->
+    <div class="modal fade" id="createBibliothequeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-building me-2"></i>Créer une Bibliothèque
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="createBibliothequeForm">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="biblioNom" class="form-label">Nom *</label>
+                                <input type="text" class="form-control" id="biblioNom" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="biblioVille" class="form-label">Ville *</label>
+                                <input type="text" class="form-control" id="biblioVille" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="biblioAdresse" class="form-label">Adresse *</label>
+                            <input type="text" class="form-control" id="biblioAdresse" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="biblioTelephone" class="form-label">Téléphone</label>
+                                <input type="tel" class="form-control" id="biblioTelephone">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="biblioCapaciteStock" class="form-label">Capacité de stock</label>
+                                <input type="number" class="form-control" id="biblioCapaciteStock" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>Créer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour modifier une bibliothèque -->
+    <div class="modal fade" id="editBibliothequeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square me-2"></i>Modifier la Bibliothèque
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editBibliothequeForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="editBiblioId">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editBiblioNom" class="form-label">Nom *</label>
+                                <input type="text" class="form-control" id="editBiblioNom" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editBiblioVille" class="form-label">Ville *</label>
+                                <input type="text" class="form-control" id="editBiblioVille" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editBiblioAdresse" class="form-label">Adresse *</label>
+                            <input type="text" class="form-control" id="editBiblioAdresse" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editBiblioTelephone" class="form-label">Téléphone</label>
+                                <input type="tel" class="form-control" id="editBiblioTelephone">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editBiblioCapaciteStock" class="form-label">Capacité de stock</label>
+                                <input type="number" class="form-control" id="editBiblioCapaciteStock" min="0">
+                            </div>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="editBiblioActif">
+                            <label class="form-check-label" for="editBiblioActif">Bibliothèque active</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-check-circle me-2"></i>Enregistrer
                         </button>
                     </div>
                 </form>
@@ -361,6 +470,7 @@
     </style>
     
     <script th:inline="javascript">
+        const CURRENT_USER_ID = /*[[${user.id}]]*/ null;
         // Récupérer le token JWT depuis localStorage
         function getAuthToken() {
             return localStorage.getItem('jwt');
@@ -405,9 +515,11 @@
         }
 
         // Charger la liste des utilisateurs
-        async function loadUsers() {
+        let usersPage = 0;
+        const usersSize = 10;
+        async function loadUsers(page = usersPage) {
             try {
-                const data = await apiRequest('/api/admin/users');
+                const data = await apiRequest(`/api/admin/users?page=${page}&size=${usersSize}`);
                 const tbody = document.getElementById('usersTableBody');
                 
                 if (data.success && data.users) {
@@ -425,6 +537,7 @@
                                 <span class="badge badge-role-${user.role.toLowerCase()}">
                                     ${user.roleDisplay}
                                 </span>
+                                ${user.bibliotheque ? `<br><small class="text-muted">${user.bibliotheque.nom}</small>` : ''}
                             </td>
                             <td>
                                 <span class="badge ${user.actif ? 'bg-success' : 'bg-danger'}">
@@ -440,6 +553,7 @@
                             <td>
                                 <button class="btn btn-sm btn-outline-warning me-1" 
                                         onclick="toggleUserStatus(${user.id})" 
+                                        ${CURRENT_USER_ID === user.id ? 'disabled title="Action interdite pour votre compte"' : 'title="Activer/Désactiver"'}
                                         title="Activer/Désactiver">
                                     <i class="bi bi-toggle-${user.actif ? 'on' : 'off'}"></i>
                                 </button>
@@ -451,6 +565,11 @@
                             </td>
                         </tr>
                     `).join('');
+                    usersPage = data.page || 0;
+                    document.getElementById('usersPageNum').textContent = (usersPage + 1);
+                    document.getElementById('usersTotalPages').textContent = (data.totalPages || 1);
+                    document.getElementById('usersPrevBtn').disabled = !(data.hasPrevious);
+                    document.getElementById('usersNextBtn').disabled = !(data.hasNext);
                 } else {
                     tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Erreur lors du chargement des utilisateurs</td></tr>';
                 }
@@ -494,21 +613,325 @@
         }
 
         // Afficher le modal de création
-        function showCreateUserModal() {
+        async function showCreateUserModal() {
+            await loadBibliothequesForSelect();
             const modal = new bootstrap.Modal(document.getElementById('createUserModal'));
             modal.show();
+        }
+
+        // Charger les bibliothèques dans le select
+        async function loadBibliothequesForSelect() {
+            try {
+                const data = await apiRequest('/api/admin/bibliotheques/actives');
+                const select = document.getElementById('userBibliotheque');
+                if (data.success && data.bibliotheques) {
+                    select.innerHTML = '<option value="">Sélectionner une bibliothèque</option>' +
+                        data.bibliotheques.map(b => `<option value="${b.id}">${b.nom} - ${b.ville}</option>`).join('');
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des bibliothèques:', error);
+            }
+        }
+
+        // Afficher/masquer le champ bibliothèque selon le rôle
+        function toggleBibliothequeField() {
+            const role = document.getElementById('userRole').value;
+            const bibliothequeField = document.getElementById('bibliothequeField');
+            const bibliothequeSelect = document.getElementById('userBibliotheque');
+            
+            if (role === 'ADMIN' || role === 'BIBLIOTHECAIRE') {
+                bibliothequeField.style.display = 'block';
+                bibliothequeSelect.required = true;
+                bibliothequeField.querySelector('small').textContent = 'Obligatoire pour les administrateurs et bibliothécaires';
+            } else {
+                bibliothequeField.style.display = 'none';
+                bibliothequeSelect.required = false;
+                bibliothequeSelect.value = '';
+            }
+        }
+
+        // Charger la liste des bibliothèques
+        let biblioPage = 0;
+        const biblioSize = 10;
+        async function loadBibliotheques(page = biblioPage) {
+            try {
+                const data = await apiRequest(`/api/admin/bibliotheques?page=${page}&size=${biblioSize}`);
+                const tbody = document.getElementById('bibliothequesTableBody');
+                
+                if (data.success && data.bibliotheques) {
+                    if (data.bibliotheques.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Aucune bibliothèque trouvée</td></tr>';
+                        return;
+                    }
+                    
+                    tbody.innerHTML = data.bibliotheques.map(biblio => `
+                        <tr>
+                            <td>${biblio.id}</td>
+                            <td>${biblio.nom}</td>
+                            <td>${biblio.ville}</td>
+                            <td>${biblio.adresse || '-'}</td>
+                            <td>${biblio.telephone || '-'}</td>
+                            <td>${biblio.capaciteStock ?? '-'}</td>
+                            <td>
+                                <span class="badge ${biblio.actif ? 'bg-success' : 'bg-danger'}">
+                                    ${biblio.actif ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-warning me-1" 
+                                        onclick="showEditBibliothequeModal('${encodeURIComponent(JSON.stringify(biblio))}')" 
+                                        title="Modifier">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="deleteBibliotheque(${biblio.id}, '${biblio.nom}')" 
+                                        title="Supprimer">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                    biblioPage = data.page || 0;
+                    document.getElementById('biblioPageNum').textContent = (biblioPage + 1);
+                    document.getElementById('biblioTotalPages').textContent = (data.totalPages || 1);
+                    document.getElementById('biblioPrevBtn').disabled = !(data.hasPrevious);
+                    document.getElementById('biblioNextBtn').disabled = !(data.hasNext);
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erreur lors du chargement des bibliothèques</td></tr>';
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des bibliothèques:', error);
+                document.getElementById('bibliothequesTableBody').innerHTML = 
+                    '<tr><td colspan="7" class="text-center text-danger">Erreur lors du chargement</td></tr>';
+            }
+        }
+
+        // Afficher modal d'édition
+        function showEditBibliothequeModal(biblioJson) {
+            let b;
+            try {
+                b = typeof biblioJson === 'string' ? JSON.parse(decodeURIComponent(biblioJson)) : biblioJson;
+            } catch (e) {
+                console.error('Erreur de parsing des données bibliothèque:', e, biblioJson);
+                alert('Impossible d’ouvrir le formulaire d’édition. Veuillez réessayer.');
+                return;
+            }
+            document.getElementById('editBiblioId').value = b.id;
+            document.getElementById('editBiblioNom').value = b.nom || '';
+            document.getElementById('editBiblioVille').value = b.ville || '';
+            document.getElementById('editBiblioAdresse').value = b.adresse || '';
+            document.getElementById('editBiblioTelephone').value = b.telephone || '';
+            document.getElementById('editBiblioCapaciteStock').value = b.capaciteStock ?? '';
+            document.getElementById('editBiblioActif').checked = !!b.actif;
+            const modal = new bootstrap.Modal(document.getElementById('editBibliothequeModal'));
+            modal.show();
+        }
+
+        // Soumettre édition bibliothèque
+        document.getElementById('editBibliothequeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editBiblioId').value;
+            const nom = document.getElementById('editBiblioNom').value.trim();
+            const ville = document.getElementById('editBiblioVille').value.trim();
+            const adresse = document.getElementById('editBiblioAdresse').value.trim();
+            const telephone = document.getElementById('editBiblioTelephone').value.trim();
+            const capaciteStockRaw = document.getElementById('editBiblioCapaciteStock').value.trim();
+            const actif = document.getElementById('editBiblioActif').checked;
+
+            if (!nom || !ville || !adresse) {
+                alert('Nom, ville et adresse sont obligatoires');
+                return;
+            }
+            if (capaciteStockRaw && parseInt(capaciteStockRaw) < 0) {
+                alert('La capacité ne peut pas être négative');
+                return;
+            }
+            if (telephone && !/^\+?[0-9\s\-()]{8,20}$/.test(telephone)) {
+                alert('Format de téléphone invalide');
+                return;
+            }
+
+            const payload = {
+                nom,
+                ville,
+                adresse,
+                telephone: telephone || null,
+                capaciteStock: capaciteStockRaw ? parseInt(capaciteStockRaw) : null,
+                actif
+            };
+
+            try {
+                const data = await apiRequest(`/api/admin/bibliotheques/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('editBibliothequeModal')).hide();
+                    loadBibliotheques();
+                    loadBibliothequesForSelect();
+                    alert('Bibliothèque mise à jour avec succès !');
+                } else {
+                    alert('Erreur: ' + (data.message || 'Impossible de mettre à jour la bibliothèque'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la mise à jour de la bibliothèque');
+            }
+        });
+
+        // Afficher le modal de création de bibliothèque
+        function showCreateBibliothequeModal() {
+            const modal = new bootstrap.Modal(document.getElementById('createBibliothequeModal'));
+            modal.show();
+        }
+
+        // Créer une bibliothèque
+        document.getElementById('createBibliothequeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Normaliser les valeurs vides
+            const telephoneValue = document.getElementById('biblioTelephone').value.trim();
+            const capaciteStockValue = document.getElementById('biblioCapaciteStock').value.trim();
+            const nomValue = document.getElementById('biblioNom').value.trim();
+            const adresseValue = document.getElementById('biblioAdresse').value.trim();
+            const villeValue = document.getElementById('biblioVille').value.trim();
+            
+            if (!nomValue) {
+                alert('Le nom de la bibliothèque est obligatoire');
+                return;
+            }
+            if (!adresseValue) {
+                alert('L\'adresse est obligatoire');
+                return;
+            }
+            if (!villeValue) {
+                alert('La ville est obligatoire');
+                return;
+            }
+            if (capaciteStockValue && parseInt(capaciteStockValue) < 0) {
+                alert('La capacité ne peut pas être négative');
+                return;
+            }
+            if (telephoneValue && !/^\+?[0-9\s\-()]{8,20}$/.test(telephoneValue)) {
+                alert('Format de téléphone invalide');
+                return;
+            }
+            
+            const formData = {
+                nom: nomValue,
+                adresse: adresseValue,
+                ville: villeValue,
+                telephone: telephoneValue ? telephoneValue : null,
+                capaciteStock: capaciteStockValue ? parseInt(capaciteStockValue) : null
+            };
+            
+            try {
+                const response = await fetch('/api/admin/bibliotheques', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                // Vérifier si la réponse est du JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Réponse non-JSON reçue:', text.substring(0, 200));
+                    alert('Erreur: Le serveur a retourné une réponse inattendue. Vérifiez la console pour plus de détails.');
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('createBibliothequeModal')).hide();
+                    document.getElementById('createBibliothequeForm').reset();
+                    loadBibliotheques();
+                    loadBibliothequesForSelect();
+                    alert('Bibliothèque créée avec succès !');
+                } else {
+                    const errorMsg = data.message || data.error || 'Impossible de créer la bibliothèque';
+                    alert('Erreur: ' + errorMsg);
+                    console.error('Erreur détaillée:', data);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la création de la bibliothèque: ' + error.message);
+            }
+        });
+
+        // Supprimer une bibliothèque
+        async function deleteBibliotheque(id, nom) {
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer la bibliothèque "${nom}" ?\n\nCette action est irréversible.`)) {
+                return;
+            }
+            
+            try {
+                const data = await apiRequest(`/api/admin/bibliotheques/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (data.success) {
+                    loadBibliotheques();
+                    loadBibliothequesForSelect();
+                    alert('Bibliothèque supprimée avec succès !');
+                } else {
+                    alert('Erreur: ' + (data.message || 'Impossible de supprimer la bibliothèque'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la suppression de la bibliothèque');
+            }
         }
 
         // Créer un utilisateur
         document.getElementById('createUserForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            const role = document.getElementById('userRole').value;
+            const bibliothequeId = document.getElementById('userBibliotheque').value;
+            const nom = document.getElementById('userNom').value.trim();
+            const prenom = document.getElementById('userPrenom').value.trim();
+            const email = document.getElementById('userEmail').value.trim();
+            const password = document.getElementById('userPassword').value;
+            
+            // Vérifier que la bibliothèque est fournie pour les administrateurs et bibliothécaires
+            if ((role === 'ADMIN' || role === 'BIBLIOTHECAIRE') && !bibliothequeId) {
+                alert('Veuillez sélectionner une bibliothèque pour l\'administrateur ou le bibliothécaire');
+                return;
+            }
+            if (!nom) {
+                alert('Le nom est obligatoire');
+                return;
+            }
+            if (!prenom) {
+                alert('Le prénom est obligatoire');
+                return;
+            }
+            if (!email) {
+                alert('L\'email est obligatoire');
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                alert('Format d\'email invalide');
+                return;
+            }
+            if (!password || password.length < 6) {
+                alert('Le mot de passe doit contenir au moins 6 caractères');
+                return;
+            }
+            
             const formData = {
-                nom: document.getElementById('userNom').value,
-                prenom: document.getElementById('userPrenom').value,
-                email: document.getElementById('userEmail').value,
-                password: document.getElementById('userPassword').value,
-                role: document.getElementById('userRole').value,
+                nom: nom,
+                prenom: prenom,
+                email: email,
+                password: password,
+                role: role,
+                bibliothequeId: bibliothequeId ? parseInt(bibliothequeId) : null,
                 emailVerifie: true,  // Par défaut, l'email est vérifié pour les comptes créés par l'admin
                 actif: true  // Par défaut, le compte est actif
             };
@@ -560,6 +983,10 @@
 
         // Activer/Désactiver un utilisateur
         async function toggleUserStatus(id) {
+            if (CURRENT_USER_ID === id) {
+                alert('Vous ne pouvez pas désactiver votre propre compte (super administrateur).');
+                return;
+            }
             try {
                 const data = await apiRequest(`/api/admin/users/${id}/toggle-status`, {
                     method: 'PUT'
@@ -580,7 +1007,30 @@
         // Initialiser au chargement de la page
         document.addEventListener('DOMContentLoaded', function() {
             loadStats();
-            loadUsers();
+            loadUsers(0);
+            loadBibliotheques();
+            loadBibliothequesForSelect();
+            document.getElementById('usersPrevBtn').addEventListener('click', () => {
+                if (usersPage > 0) {
+                    loadUsers(usersPage - 1);
+                }
+            });
+            document.getElementById('usersNextBtn').addEventListener('click', () => {
+                loadUsers(usersPage + 1);
+            });
+            
+            // Charger les bibliothèques quand l'onglet est cliqué
+            document.getElementById('bibliotheques-tab').addEventListener('shown.bs.tab', function() {
+                loadBibliotheques(0);
+            });
+            document.getElementById('biblioPrevBtn').addEventListener('click', () => {
+                if (biblioPage > 0) {
+                    loadBibliotheques(biblioPage - 1);
+                }
+            });
+            document.getElementById('biblioNextBtn').addEventListener('click', () => {
+                loadBibliotheques(biblioPage + 1);
+            });
             
             // Charger les logs quand l'onglet est cliqué
             document.getElementById('logs-tab').addEventListener('shown.bs.tab', function() {
