@@ -208,6 +208,7 @@
                                         <th>Statut</th>
                                         <th>Retour prévu</th>
                                         <th>Retard</th>
+                                        <th>Détails</th>
                                         <th>Avis</th>
                                     </tr>
                                 </thead>
@@ -244,6 +245,21 @@
                             <div class="col-12 text-center text-muted">Chargement des recommandations...</div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="pretDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-eye me-2"></i>Détails du prêt</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="pretDetailsBody"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                 </div>
             </div>
         </div>
@@ -657,6 +673,7 @@
                 const avisCell = (p.statut === 'RETOURNE' && !p.feedbackUsager)
                     ? `<button class="btn btn-sm btn-outline-primary" onclick="ouvrirFeedbackPret(${p.id})"><i class='bi bi-chat-dots me-1'></i>Donner un avis</button>`
                     : (p.feedbackUsager ? `<span class="text-muted small">Avis enregistré${p.noteUsager ? ' ('+p.noteUsager+'/5)' : ''}</span>` : '-');
+                const detailsBtn = `<button class="btn btn-sm btn-outline-secondary" onclick="ouvrirDetailsPret(${p.id})"><i class='bi bi-eye me-1'></i>Détails</button>`;
                 return `
                     <tr>
                         <td>
@@ -666,6 +683,7 @@
                         <td><span class="badge ${badgeClass}">${label}</span></td>
                         <td class="fw-semibold">${formatDateFr(due)}</td>
                         <td>${retardCell}</td>
+                        <td>${detailsBtn}</td>
                         <td>${avisCell}</td>
                     </tr>
                 `;
@@ -699,6 +717,52 @@
                 const toastEvent = new CustomEvent('show-toast', { detail: { type: 'danger', message: 'Erreur lors de l\'enregistrement de l\'avis.' }});
                 document.dispatchEvent(toastEvent);
             }
+        }
+        function ouvrirDetailsPret(pretId) {
+            const pret = (Array.isArray(pretsUsagerList) ? pretsUsagerList : []).find(x => String(x.id) === String(pretId));
+            if (!pret) return;
+            const titre = pret.ressource?.titre || 'Ressource';
+            const auteur = pret.ressource?.auteur || '';
+            const bibliotheque = pret.bibliotheque || '-';
+            const dateDemande = formatDateFr(parseDate(pret.dateReservation));
+            const dateEmprunt = formatDateFr(parseDate(pret.dateEmprunt));
+            const dateRetourPrevu = formatDateFr(parseDate(pret.dateRetourPrevu));
+            const dateRetourEffectif = formatDateFr(parseDate(pret.dateRetourEffectif));
+            const duree = pret.dureeEmprunt != null ? pret.dureeEmprunt + ' jours' : '-';
+            const prolongations = pret.prolongations != null ? pret.prolongations : 0;
+            const penalite = pret.penaliteRetard != null ? pret.penaliteRetard : 0;
+            const retard = pret.retardJours != null ? pret.retardJours : 0;
+            const statut =
+                pret.statut === 'RESERVE' ? 'Réservé' :
+                pret.statut === 'EMPRUNTE' ? 'Emprunté' :
+                pret.statut === 'EN_COURS' ? 'En cours' :
+                pret.statut === 'RETOURNE' ? 'Retourné' :
+                pret.statut === 'BLOQUE' ? 'Bloqué' :
+                pret.statut === 'CLOTURE' ? 'Clôturé' : (pret.statut || '-');
+            const body = document.getElementById('pretDetailsBody');
+            if (!body) return;
+            body.innerHTML = `
+                <div class="mb-3">
+                    <div class="fw-semibold">${titre}</div>
+                    <div class="text-muted small">${auteur}</div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6"><div class="text-muted small">Statut</div><div class="fw-semibold">${statut}</div></div>
+                    <div class="col-md-6"><div class="text-muted small">Bibliothèque</div><div class="fw-semibold">${bibliotheque}</div></div>
+                    <div class="col-md-6"><div class="text-muted small">Date de demande</div><div class="fw-semibold">${dateDemande}</div></div>
+                    <div class="col-md-6"><div class="text-muted small">Date d'emprunt</div><div class="fw-semibold">${dateEmprunt}</div></div>
+                    <div class="col-md-6"><div class="text-muted small">Retour prévu</div><div class="fw-semibold">${dateRetourPrevu}</div></div>
+                    <div class="col-md-6"><div class="text-muted small">Retour effectif</div><div class="fw-semibold">${dateRetourEffectif}</div></div>
+                    <div class="col-md-6"><div class="text-muted small">Durée</div><div class="fw-semibold">${duree}</div></div>
+                    <div class="col-md-6"><div class="text-muted small">Prolongations</div><div class="fw-semibold">${prolongations}</div></div>
+                    <div class="col-md-6"><div class="text-muted small">Pénalité</div><div class="fw-semibold">${penalite}</div></div>
+                    <div class="col-md-6"><div class="text-muted small">Retard</div><div class="fw-semibold">${retard} jour${retard>1?'s':''}</div></div>
+                </div>
+            `;
+            const modalEl = document.getElementById('pretDetailsModal');
+            if (!modalEl) return;
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
         }
         function mettreAJourCompteurs() {
             const actifsEl = document.getElementById('actifsCount');
