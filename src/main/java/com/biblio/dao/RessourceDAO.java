@@ -16,4 +16,7 @@ public interface RessourceDAO extends JpaRepository<Ressource, Long> {
 
     @Query("SELECT COALESCE(SUM(r.nombreExemplaires), 0) FROM Ressource r WHERE r.bibliotheque.id = :bibliothequeId")
     Integer sumNombreExemplairesByBibliothequeId(@Param("bibliothequeId") Long bibliothequeId);
+
+    @Query("SELECT COALESCE(SUM(r.nombreExemplaires), 0) FROM Ressource r")
+    Integer sumTotalExemplaires();
 }
