@@ -8,6 +8,7 @@ import com.biblio.entities.User;
 import com.biblio.enums.Role;
 import com.biblio.services.AdminService;
 import com.biblio.services.BibliothequeService;
+import com.biblio.services.UserLogService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,11 +29,13 @@ public class AdminController {
     private final AdminService adminService;
     private final BibliothequeService bibliothequeService;
     private final UserDAO userDAO;
+    private final UserLogService userLogService;
 
-    public AdminController(AdminService adminService, BibliothequeService bibliothequeService, UserDAO userDAO) {
+    public AdminController(AdminService adminService, BibliothequeService bibliothequeService, UserDAO userDAO, UserLogService userLogService) {
         this.adminService = adminService;
         this.bibliothequeService = bibliothequeService;
         this.userDAO = userDAO;
+        this.userLogService = userLogService;
     }
 
     /**
@@ -116,6 +119,11 @@ public class AdminController {
                     request.actif()
             );
 
+            if (currentUser != null) {
+                User actor = userDAO.findByEmail(currentUser.getUsername()).orElse(null);
+                userLogService.log(actor, "CREATE_USER", "Création utilisateur " + user.getEmail(), "INFO");
+            }
+
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "Utilisateur créé avec succès");
@@ -158,6 +166,10 @@ public class AdminController {
             }
 
             adminService.deleteUser(id);
+            if (currentUser != null) {
+                User actor = userDAO.findByEmail(currentUser.getUsername()).orElse(null);
+                userLogService.log(actor, "DELETE_USER", "Suppression utilisateur ID " + id, "WARN");
+            }
             
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
@@ -198,6 +210,10 @@ public class AdminController {
                 }
             }
             User user = adminService.toggleUserStatus(id);
+            if (currentUser != null) {
+                User actor = userDAO.findByEmail(currentUser.getUsername()).orElse(null);
+                userLogService.log(actor, "TOGGLE_STATUS", "Changement de statut pour " + user.getEmail() + " -> " + (user.getActif() ? "ACTIF" : "INACTIF"), "INFO");
+            }
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "Statut de l'utilisateur modifié avec succès");
@@ -214,13 +230,14 @@ public class AdminController {
 
     /**
      * GET /api/admin/logs
-     * Récupère les logs système
+     * Récupère les logs des utilisateurs
      */
     @GetMapping("/logs")
     public ResponseEntity<Map<String, Object>> getLogs(
-            @RequestParam(required = false, defaultValue = "100") int limit) {
+            @RequestParam(required = false, defaultValue = "100") int limit,
+            @RequestParam(required = false) Long userId) {
         try {
-            List<Map<String, Object>> logs = adminService.getSystemLogs(limit);
+            List<Map<String, Object>> logs = userLogService.getRecentLogs(limit, userId);
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("logs", logs);
@@ -373,7 +390,9 @@ public class AdminController {
                     request.adresse(),
                     request.ville(),
                     request.telephone(),
-                    request.capaciteStock()
+                    request.capaciteStock(),
+                    request.latitude(),
+                    request.longitude()
             );
 
             Map<String, Object> result = new HashMap<>();
@@ -453,6 +472,8 @@ public class AdminController {
         map.put("telephone", bibliotheque.getTelephone());
         map.put("capaciteStock", bibliotheque.getCapaciteStock());
         map.put("actif", bibliotheque.getActif());
+        map.put("latitude", bibliotheque.getLatitude());
+        map.put("longitude", bibliotheque.getLongitude());
         return map;
     }
 }

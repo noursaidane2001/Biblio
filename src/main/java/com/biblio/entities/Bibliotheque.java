@@ -54,12 +54,18 @@ public class Bibliotheque {
 	    private Integer capaciteStock;
 
 	    @Column(nullable = false)
-	    @Builder.Default
-	    private Boolean actif = true;
+    @Builder.Default
+    private Boolean actif = true;
 
-	    @OneToMany(mappedBy = "bibliotheque", cascade = CascadeType.ALL, orphanRemoval = true)
-	    @Builder.Default
-	    private Set<Ressource> ressources = new HashSet<>();
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
+    @OneToMany(mappedBy = "bibliotheque", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<Ressource> ressources = new HashSet<>();
 
 	    @OneToMany(mappedBy = "bibliotheque")
 	    @Builder.Default
@@ -101,13 +107,21 @@ public class Bibliotheque {
 
 		public Boolean getActif() {
 			// TODO Auto-generated method stub
-			return actif;
-		}
+        return actif;
+    }
 
-	 /*   public void addRessource(Ressource ressource) {
-	        ressources.add(ressource);
-	        ressource.setBibliotheque(this);
-	    }
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+ /*   public void addRessource(Ressource ressource) {
+        ressources.add(ressource);
+        ressource.setBibliotheque(this);
+    }
 
 	    public void removeRessource(Ressource ressource) {
 	        ressources.remove(ressource);
