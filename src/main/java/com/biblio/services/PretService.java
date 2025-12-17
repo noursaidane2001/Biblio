@@ -37,6 +37,7 @@ public class PretService {
                 .statut(StatutPret.RESERVE)
                 .build();
         pret.reserver();
+        incrementerPopularite(pret.getRessource());
         return pretDAO.save(pret);
     }
 
@@ -63,6 +64,7 @@ public class PretService {
                     .statut(StatutPret.RESERVE)
                     .build();
             pret.reserver();
+            incrementerPopularite(pret.getRessource());
             pret = pretDAO.save(pret);
             pret.emprunter();
             pret.setDateRetourPrevu(java.time.LocalDate.now().plusDays(pret.getDureeEmprunt()));
@@ -198,5 +200,12 @@ public class PretService {
             pret.cloturer();
         }
         return pretDAO.save(pret);
+    }
+
+    private void incrementerPopularite(com.biblio.entities.Ressource ressource) {
+        if (ressource != null) {
+            ressource.incrementerPopularite();
+            ressourceDAO.save(ressource);
+        }
     }
 }
