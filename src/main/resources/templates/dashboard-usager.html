@@ -305,6 +305,7 @@
             await chargerReservationsUtilisateur();
             await chargerPretsUtilisateur();
             initialiserFiltresCatalogue();
+            renderRecommendations();
         });
 
         async function chargerCatalogue() {
@@ -732,52 +733,125 @@
             return text.length > max ? text.substring(0, max).trim() + '…' : text;
         }
         
-        function calculerTopReservationsParUsager() {
-            const list = Array.isArray(reservationsUsagerList) ? reservationsUsagerList : [];
-            const counts = {};
-            const meta = {};
-            list.forEach(r => {
-                const key = r.ressource && r.ressource.id ? String(r.ressource.id) : null;
-                if (!key) return;
-                counts[key] = (counts[key] || 0) + 1;
-                if (!meta[key]) meta[key] = r.ressource;
+        function calculerRecommandationsDernierPret() {
+            const prets = Array.isArray(pretsUsagerList) ? pretsUsagerList : [];
+            if (prets.length === 0) return { category: null, items: [] };
+
+            // 1. Trouver le dernier prêt (le plus récent)
+            // Tri par dateEmprunt (ou dateReservation si manquant)
+            const sortedPrets = [...prets].sort((a, b) => {
+                const d1 = new Date(a.dateEmprunt || a.dateReservation || 0);
+                const d2 = new Date(b.dateEmprunt || b.dateReservation || 0);
+                return d2 - d1;
             });
-            const entries = Object.keys(counts).map(id => ({ id, count: counts[id], ressource: meta[id] }));
-            entries.sort((a, b) => b.count - a.count);
-            return entries.slice(0, 2);
+
+            const lastLoan = sortedPrets[0];
+            
+            // Récupérer la catégorie (directement du prêt ou via le catalogue)
+            let targetCategory = null;
+            if (lastLoan.ressource && lastLoan.ressource.categorie) {
+                targetCategory = lastLoan.ressource.categorie;
+            } else if (lastLoan.ressource && lastLoan.ressource.id) {
+                const catalogItem = catalogData.find(c => String(c.id) === String(lastLoan.ressource.id));
+                if (catalogItem) targetCategory = catalogItem.categorie;
+            }
+
+            if (!targetCategory) return { category: null, items: [] };
+
+            // 2. Identifier les ressources déjà empruntées (pour les exclure)
+            const borrowedIds = new Set();
+            prets.forEach(p => {
+                if (p.ressource && p.ressource.id) {
+                    borrowedIds.add(p.ressource.id);
+                }
+            });
+
+            // 3. Filtrer le catalogue : même catégorie, pas encore emprunté, ET disponible
+            const recommendations = catalogData.filter(r => 
+                r.categorie === targetCategory && 
+                !borrowedIds.has(r.id) &&
+                (r.exemplairesDisponibles > 0)
+            );
+
+            // 4. Retourner les 2 premiers résultats
+            return {
+                category: targetCategory,
+                items: recommendations.slice(0, 2)
+            };
         }
         
         function renderRecommendations() {
             const grid = document.getElementById('recommendationGrid');
-            const top = calculerTopReservationsParUsager();
             if (!grid) return;
-            if (top.length === 0) {
-                grid.innerHTML = `<div class="col-12 text-center text-muted">Aucune recommandation disponible pour le moment.</div>`;
+            
+            const result = calculerRecommandationsDernierPret();
+            const items = result.items || [];
+            const categoryRaw = result.category;
+
+            if (items.length === 0) {
+                grid.innerHTML = `<div class="col-12 text-center text-muted">Aucune recommandation disponible basée sur votre dernier prêt pour le moment.</div>`;
                 return;
             }
-            grid.innerHTML = top.map(item => {
-                const r = item.ressource || {};
+
+            const catLabel = categoryRaw ? (CATALOG_CATEGORY_LABELS[categoryRaw] || categoryRaw) : 'votre dernier prêt';
+
+            // Logique de vérification des limites (similaire à createCatalogueCard)
+            const actifsReservations = Array.isArray(reservationsUsagerList)
+                ? reservationsUsagerList.filter(r => r.statut === 'EN_ATTENTE').length
+                : 0;
+            const limiteAtteinte = actifsReservations >= 2;
+            const hasBlockedLoan = Array.isArray(pretsUsagerList) && pretsUsagerList.some(p => p.statut === 'BLOQUE');
+
+            grid.innerHTML = items.map(r => {
                 const titre = r.titre || 'Ressource';
                 const auteur = r.auteur || '';
-                const categorie = CATALOG_CATEGORY_LABELS[r.categorie] || '';
+                const categorie = CATALOG_CATEGORY_LABELS[r.categorie] || r.categorie || '';
                 const typeLabel = CATALOG_TYPE_LABELS[r.typeRessource] || '';
+                const cover = r.imageCouverture || 'https://illustrations.popsy.co/gray/bookshelf.svg';
+                
+                // État de réservation
+                const statutReservation = reservationsParRessource[r.id];
+                const isActiveReservation = statutReservation === 'EN_ATTENTE';
+                const dejaReserveMemeIsbn = !!(r.isbn && reservationsParIsbn[r.isbn]);
+                
+                const disabled = isActiveReservation || dejaReserveMemeIsbn || hasBlockedLoan || limiteAtteinte;
+                let disableReason = '';
+                if (isActiveReservation) disableReason = 'Réservation déjà en attente';
+                else if (dejaReserveMemeIsbn) disableReason = 'Réservation déjà faite pour cet ISBN';
+                else if (limiteAtteinte) disableReason = 'Limite 2 réservations en attente atteinte';
+                else if (hasBlockedLoan) disableReason = 'Prêt bloqué: réservation impossible';
+
                 return `
                     <div class="col-md-6 col-xl-4">
                         <div class="card h-100 border-0 shadow-sm hover-shadow animate-fade-in">
+                            <div class="ratio ratio-16x9 rounded-top overflow-hidden">
+                                <img src="${cover}" alt="${titre}" class="w-100 h-100" style="object-fit: cover;">
+                            </div>
                             <div class="card-body">
                                 <div class="d-flex gap-2 mb-2 flex-wrap">
                                     ${categorie ? `<span class="badge bg-primary-subtle text-primary">${categorie}</span>` : ''}
                                     ${typeLabel ? `<span class="badge bg-secondary-subtle text-secondary">${typeLabel}</span>` : ''}
-                                    <span class="badge bg-warning-subtle text-warning">Réservations: ${item.count}</span>
+                                    <span class="badge bg-success-subtle text-success">Suggéré</span>
                                 </div>
                                 <h5 class="fw-bold mb-1">${titre}</h5>
                                 <p class="text-muted small mb-2"><i class="bi bi-pen me-1"></i>${auteur}</p>
-                                <div class="text-muted small">Basé sur vos réservations les plus fréquentes</div>
+                                <div class="text-muted small mb-3">Basé sur votre dernier emprunt en <strong>${catLabel}</strong></div>
+                                <button class="btn btn-sm btn-outline-primary w-100 btn-reserver-rec" data-ressource-id="${r.id}" ${disabled ? 'disabled title=\"'+disableReason+'\"' : ''}>
+                                    <i class="bi bi-bookmark-plus me-1"></i>${isActiveReservation ? 'Réservé' : 'Réserver'}
+                                </button>
                             </div>
                         </div>
                     </div>
                 `;
             }).join('');
+
+            // Attacher les écouteurs d'événements
+            grid.querySelectorAll('.btn-reserver-rec').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const ressourceId = e.currentTarget.getAttribute('data-ressource-id');
+                    await reserverRessource(ressourceId);
+                });
+            });
         }
     </script>
 </body>
