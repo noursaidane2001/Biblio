@@ -92,10 +92,110 @@
             </div>
         </div>
 
-        <!-- Contenu principal et barre latérale -->
-        <div class="row g-4">
-            <div class="col-lg-8">
-                <div class="card shadow-lg border-0 mb-4">
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs nav-fill mb-4" id="dashboardTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="explore-tab" data-bs-toggle="tab" data-bs-target="#explore-pane" type="button" role="tab" aria-controls="explore-pane" aria-selected="true">
+                    <i class="bi bi-search me-2"></i>Explorer le catalogue
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="prets-tab" data-bs-toggle="tab" data-bs-target="#prets-pane" type="button" role="tab" aria-controls="prets-pane" aria-selected="false">
+                    <i class="bi bi-journal-text me-2"></i>Mes prêts
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="reservations-tab" data-bs-toggle="tab" data-bs-target="#reservations-pane" type="button" role="tab" aria-controls="reservations-pane" aria-selected="false">
+                    <i class="bi bi-bookmarks me-2"></i>Mes réservations
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="recommendations-tab" data-bs-toggle="tab" data-bs-target="#recommendations-pane" type="button" role="tab" aria-controls="recommendations-pane" aria-selected="false">
+                    <i class="bi bi-stars me-2"></i>Recommandations
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="dashboardTabsContent">
+            
+            <!-- Pane: Explorer le catalogue -->
+            <div class="tab-pane fade show active" id="explore-pane" role="tabpanel" aria-labelledby="explore-tab" tabindex="0">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5 class="mb-0"><i class="bi bi-search me-2"></i>Explorer le catalogue</h5>
+                        <span class="badge bg-light text-info fw-semibold" id="catalogResultsCount">0 résultat</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end mb-4">
+                            <div class="col-lg-4">
+                                <label for="catalogSearch" class="form-label fw-semibold text-muted">Rechercher par titre, auteur ou ISBN</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white text-muted"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="catalogSearch" placeholder="Ex: Hugo, programmation, poésie...">
+                                </div>
+                            </div>
+                            <div class="col-lg-3">
+                                <label for="catalogCategorie" class="form-label fw-semibold text-muted">Catégorie</label>
+                                <select class="form-select" id="catalogCategorie">
+                                    <option value="">Toutes les catégories</option>
+                                    <option value="LITTERATURE">Littérature</option>
+                                    <option value="SCIENCES">Sciences</option>
+                                    <option value="MULTIMEDIA">Multimédia</option>
+                                    <option value="JEUNESSE">Jeunesse</option>
+                                    <option value="HISTOIRE">Histoire</option>
+                                    <option value="TECHNOLOGIE">Technologie</option>
+                                    <option value="TECHNOLOGIE">Philosophie</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-3">
+                                <label for="catalogType" class="form-label fw-semibold text-muted">Type</label>
+                                <select class="form-select" id="catalogType">
+                                    <option value="">Tous les types</option>
+                                    <option value="LIVRE">Livre</option>
+                                    <option value="MAGAZINE">Magazine</option>
+                                    <option value="DVD">DVD</option>
+                                    <option value="CD">CD</option>
+                                    <option value="NUMERIQUE">Numérique</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-2 text-lg-end">
+                                <label for="catalogStatut" class="form-label fw-semibold text-muted">Statut</label>
+                                <select class="form-select" id="catalogStatut">
+                                    <option value="">Tous</option>
+                                    <option value="DISPONIBLE">Disponibles</option>
+                                    <option value="INDISPONIBLE">Indisponibles</option>
+                                    <option value="EN_ATTENTE">Mes réservations en attente</option>
+                                    <option value="CONFIRMEE">Mes réservations confirmées</option>
+                                    <option value="ANNULEE">Mes réservations annulées</option>
+                                    <option value="EXPIREE">Mes réservations expirées</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-lg-12 text-lg-end">
+                                <button class="btn btn-outline-secondary" id="catalogReset">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Réinitialiser
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="catalogLoader" class="text-center py-4">
+                            <div class="spinner-border text-primary mb-3" role="status">
+                                <span class="visually-hidden">Chargement...</span>
+                            </div>
+                            <p class="text-muted mb-0">Chargement du catalogue...</p>
+                        </div>
+
+                        <div id="catalogEmpty" class="alert alert-info d-none">
+                            Aucun résultat ne correspond à votre recherche. Essayez d'élargir les filtres ou de modifier le mot-clé.
+                        </div>
+
+                        <div class="row g-4" id="catalogGrid"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pane: Mes prêts -->
+            <div class="tab-pane fade" id="prets-pane" role="tabpanel" aria-labelledby="prets-tab" tabindex="0">
+                <div class="card shadow-lg border-0">
                     <div class="card-header bg-info text-white">
                         <h5 class="mb-0"><i class="bi bi-journal-text me-2"></i>Mes prêts</h5>
                     </div>
@@ -119,7 +219,8 @@
                 </div>
             </div>
 
-            <div class="col-lg-4">
+            <!-- Pane: Mes réservations -->
+            <div class="tab-pane fade" id="reservations-pane" role="tabpanel" aria-labelledby="reservations-tab" tabindex="0">
                 <div class="card shadow-lg border-0">
                     <div class="card-header bg-secondary text-white">
                         <h5 class="mb-0"><i class="bi bi-bookmarks me-2"></i>Mes réservations</h5>
@@ -130,90 +231,19 @@
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Explorer le catalogue -->
-        <div class="card shadow-lg border-0 mt-4">
-            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <h5 class="mb-0"><i class="bi bi-search me-2"></i>Explorer le catalogue</h5>
-                <span class="badge bg-light text-info fw-semibold" id="catalogResultsCount">0 résultat</span>
-            </div>
-            <div class="card-body">
-                <div class="row g-3 align-items-end mb-4">
-                    <div class="col-lg-4">
-                        <label for="catalogSearch" class="form-label fw-semibold text-muted">Rechercher par titre, auteur ou ISBN</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-white text-muted"><i class="bi bi-search"></i></span>
-                            <input type="text" class="form-control" id="catalogSearch" placeholder="Ex: Hugo, programmation, poésie...">
+            <!-- Pane: Recommandations -->
+            <div class="tab-pane fade" id="recommendations-pane" role="tabpanel" aria-labelledby="recommendations-tab" tabindex="0">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5 class="mb-0"><i class="bi bi-stars me-2"></i>Recommandations personnalisées</h5>
+                        <span class="text-muted small">Basées sur vos lectures récentes</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4" id="recommendationGrid">
+                            <div class="col-12 text-center text-muted">Chargement des recommandations...</div>
                         </div>
                     </div>
-                    <div class="col-lg-3">
-                        <label for="catalogCategorie" class="form-label fw-semibold text-muted">Catégorie</label>
-                        <select class="form-select" id="catalogCategorie">
-                            <option value="">Toutes les catégories</option>
-                            <option value="LITTERATURE">Littérature</option>
-                            <option value="SCIENCES">Sciences</option>
-                            <option value="MULTIMEDIA">Multimédia</option>
-                            <option value="JEUNESSE">Jeunesse</option>
-                            <option value="HISTOIRE">Histoire</option>
-                            <option value="TECHNOLOGIE">Technologie</option>
-                            <option value="TECHNOLOGIE">Philosophie</option>
-                        </select>
-                    </div>
-                    <div class="col-lg-3">
-                        <label for="catalogType" class="form-label fw-semibold text-muted">Type</label>
-                        <select class="form-select" id="catalogType">
-                            <option value="">Tous les types</option>
-                            <option value="LIVRE">Livre</option>
-                            <option value="MAGAZINE">Magazine</option>
-                            <option value="DVD">DVD</option>
-                            <option value="CD">CD</option>
-                            <option value="NUMERIQUE">Numérique</option>
-                        </select>
-                    </div>
-                    <div class="col-lg-2 text-lg-end">
-                        <label for="catalogStatut" class="form-label fw-semibold text-muted">Statut</label>
-                        <select class="form-select" id="catalogStatut">
-                            <option value="">Tous</option>
-                            <option value="DISPONIBLE">Disponibles</option>
-                            <option value="INDISPONIBLE">Indisponibles</option>
-                            <option value="EN_ATTENTE">Mes réservations en attente</option>
-                            <option value="CONFIRMEE">Mes réservations confirmées</option>
-                            <option value="ANNULEE">Mes réservations annulées</option>
-                            <option value="EXPIREE">Mes réservations expirées</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-lg-12 text-lg-end">
-                        <button class="btn btn-outline-secondary" id="catalogReset">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i>Réinitialiser
-                        </button>
-                    </div>
-                </div>
-
-                <div id="catalogLoader" class="text-center py-4">
-                    <div class="spinner-border text-primary mb-3" role="status">
-                        <span class="visually-hidden">Chargement...</span>
-                    </div>
-                    <p class="text-muted mb-0">Chargement du catalogue...</p>
-                </div>
-
-                <div id="catalogEmpty" class="alert alert-info d-none">
-                    Aucun résultat ne correspond à votre recherche. Essayez d'élargir les filtres ou de modifier le mot-clé.
-                </div>
-
-                <div class="row g-4" id="catalogGrid"></div>
-            </div>
-        </div>
-
-        <!-- Recommandations -->
-        <div class="card shadow-lg border-0 mt-4">
-            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <h5 class="mb-0"><i class="bi bi-stars me-2"></i>Recommandations personnalisées</h5>
-                <span class="text-muted small">Basées sur vos lectures récentes</span>
-            </div>
-            <div class="card-body">
-                <div class="row g-4" id="recommendationGrid">
-                    <div class="col-12 text-center text-muted">Chargement des recommandations...</div>
                 </div>
             </div>
         </div>
