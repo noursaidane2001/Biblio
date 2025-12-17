@@ -329,7 +329,9 @@ public class AdminController {
                     (String) updates.get("ville"),
                     (String) updates.get("telephone"),
                     updates.get("capaciteStock") != null ? ((Number) updates.get("capaciteStock")).intValue() : null,
-                    updates.get("actif") != null ? (Boolean) updates.get("actif") : null
+                    updates.get("actif") != null ? (Boolean) updates.get("actif") : null,
+                    updates.get("latitude") != null ? ((Number) updates.get("latitude")).doubleValue() : null,
+                    updates.get("longitude") != null ? ((Number) updates.get("longitude")).doubleValue() : null
             );
 
             Map<String, Object> result = new HashMap<>();
