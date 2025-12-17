@@ -331,6 +331,28 @@
                                 <td>${biblio.capaciteStock || '-'}</td>
                             </tr>
                             <tr>
+                                <td class="fw-semibold text-muted">Stockage restant:</td>
+                                <td>
+                                    ${biblio.capaciteStock ? `
+                                        <div class="mb-2">
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar bg-success" role="progressbar" 
+                                                     style="width: ${(biblio.stockPourcentageRestant ?? 0)}%;" 
+                                                     aria-valuenow="${biblio.stockPourcentageRestant ?? 0}" 
+                                                     aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                            <small class="text-muted">
+                                                ${biblio.stockRestant ?? 0} libres sur ${biblio.capaciteStock} 
+                                                (${biblio.stockTotalExemplaires ?? 0} utilisés) — 
+                                                ${biblio.stockPourcentageRestant ?? 0}%
+                                            </small>
+                                        </div>
+                                    ` : `
+                                        <span class="badge bg-info-subtle text-info">Capacité illimitée</span>
+                                    `}
+                                </td>
+                            </tr>
+                            <tr>
                                 <td class="fw-semibold text-muted">Statut:</td>
                                 <td>
                                     <span class="badge ${biblio.actif ? 'bg-success' : 'bg-danger'}">
