@@ -13,7 +13,7 @@
     <!-- Custom CSS -->
     <link th:href="@{/css/custom.css}" rel="stylesheet">
 </head>
-<body class="bg-gradient-primary">
+<body class="bg-light">
     <div th:replace="~{fragments/header :: header}"></div>
     <div th:replace="~{fragments/toasts :: toast-container}"></div>
 
@@ -108,40 +108,56 @@
         </div>
 
         <!-- Statistiques -->
-        <div id="statsContainer" class="row g-3 mb-4" style="display: none;">
+        <div id="statsContainer" class="row g-4 mb-4" style="display: none;">
             <div class="col-md-3">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-book text-info" style="font-size: 2rem;"></i>
-                        <h3 class="mt-2 mb-0" id="totalRessources">0</h3>
-                        <p class="text-muted mb-0 small">Ressources totales</p>
+                <div class="card shadow-sm border-0">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                            <i class="bi bi-book text-info" style="font-size: 1.5rem;"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Ressources</div>
+                            <div class="h5 mb-0" id="totalRessources">0</div>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
-                        <h3 class="mt-2 mb-0" id="totalDisponibles">0</h3>
-                        <p class="text-muted mb-0 small">Exemplaires disponibles</p>
+                <div class="card shadow-sm border-0">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                            <i class="bi bi-check-circle text-success" style="font-size: 1.5rem;"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Disponibles</div>
+                            <div class="h5 mb-0" id="totalDisponibles">0</div>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-stack text-warning" style="font-size: 2rem;"></i>
-                        <h3 class="mt-2 mb-0" id="totalExemplaires">0</h3>
-                        <p class="text-muted mb-0 small">Exemplaires totaux</p>
+                <div class="card shadow-sm border-0">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                            <i class="bi bi-stack text-warning" style="font-size: 1.5rem;"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Exemplaires</div>
+                            <div class="h5 mb-0" id="totalExemplaires">0</div>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-grid text-primary" style="font-size: 2rem;"></i>
-                        <h3 class="mt-2 mb-0" id="totalCategories">0</h3>
-                        <p class="text-muted mb-0 small">Catégories</p>
+                <div class="card shadow-sm border-0">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                            <i class="bi bi-grid text-primary" style="font-size: 1.5rem;"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Catégories</div>
+                            <div class="h5 mb-0" id="totalCategories">0</div>
+                        </div>
                     </div>
                 </div>
             </div>
