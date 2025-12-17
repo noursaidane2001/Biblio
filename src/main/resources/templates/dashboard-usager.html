@@ -503,7 +503,9 @@
         function createCatalogueCard(ressource) {
             const categorie = CATALOG_CATEGORY_LABELS[ressource.categorie] || 'Divers';
             const typeLabel = CATALOG_TYPE_LABELS[ressource.typeRessource] || '';
-            const cover = ressource.imageCouverture || 'https://illustrations.popsy.co/gray/bookshelf.svg';
+            const cover = (ressource.imageCouverture && ressource.imageCouverture.trim() !== '') 
+                ? ressource.imageCouverture 
+                : '/images/default-cover.png';
             const disponibles = ressource.exemplairesDisponibles ?? 0;
             const statutReservation = reservationsParRessource[ressource.id];
             const isActiveReservation = statutReservation === 'EN_ATTENTE';
@@ -531,7 +533,11 @@
                 <div class="col-md-6 col-xl-4">
                     <div class="card h-100 border-0 shadow-sm">
                         <div class="ratio ratio-16x9 rounded-top overflow-hidden">
-                            <img src="${cover}" alt="${ressource.titre || 'Ressource'}" class="w-100 h-100" style="object-fit: cover;">
+                            <img src="${cover}" 
+                                 alt="${ressource.titre || 'Ressource'}" 
+                                 class="w-100 h-100" 
+                                 style="object-fit: cover;"
+                                 onerror="this.onerror=null; this.src='/images/default-cover.svg';">
                         </div>
                         <div class="card-body">
                             <div class="d-flex gap-2 mb-2 flex-wrap">
