@@ -80,8 +80,14 @@ public class RessourceController {
      * Liste toutes les ressources (filtrées par bibliothèque pour les bibliothécaires)
      */
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Map<String, Object>> getAllRessources(@AuthenticationPrincipal UserDetails currentUser) {
+    public ResponseEntity<Map<String, Object>> getAllRessources(
+            @AuthenticationPrincipal UserDetails currentUser,
+            @RequestParam(value = "disponible", required = false) Boolean disponible,
+            @RequestParam(value = "popularite", required = false) String popularite,
+            @RequestParam(value = "categorie", required = false) String categorie,
+            @RequestParam(value = "dateDebut", required = false) java.time.LocalDate dateDebut,
+            @RequestParam(value = "dateFin", required = false) java.time.LocalDate dateFin
+    ) {
         try {
             List<Ressource> ressourcesList;
 
@@ -98,7 +104,33 @@ public class RessourceController {
                 ressourcesList = ressourceService.getAllRessources();
             }
 
-            List<Map<String, Object>> ressources = ressourcesList.stream()
+            List<Ressource> filtered = ressourcesList.stream().filter(r -> {
+                boolean ok = true;
+                if (disponible != null) {
+                    boolean isDispo = r.getExemplairesDisponibles() != null && r.getExemplairesDisponibles() > 0;
+                    ok = ok && ((disponible && isDispo) || (!disponible && !isDispo));
+                }
+                if (popularite != null && !popularite.isBlank()) {
+                    int pop = r.getPopularite() != null ? r.getPopularite() : 0;
+                    String tier = pop < 2 ? "FAIBLE" : (pop < 10 ? "MOYENNE" : "ELEVEE");
+                    ok = ok && tier.equalsIgnoreCase(popularite);
+                }
+                if (categorie != null && !categorie.isBlank()) {
+                    ok = ok && r.getCategorie() != null && r.getCategorie().name().equalsIgnoreCase(categorie);
+                }
+                if (dateDebut != null || dateFin != null) {
+                    java.time.LocalDate dp = r.getDatePublication();
+                    if (dp == null) {
+                        ok = false;
+                    } else {
+                        if (dateDebut != null) ok = ok && (dp.isEqual(dateDebut) || dp.isAfter(dateDebut));
+                        if (dateFin != null) ok = ok && (dp.isEqual(dateFin) || dp.isBefore(dateFin));
+                    }
+                }
+                return ok;
+            }).toList();
+
+            List<Map<String, Object>> ressources = filtered.stream()
                     .map(this::ressourceToMap)
                     .collect(Collectors.toList());
             

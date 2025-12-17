@@ -315,7 +315,19 @@ public class ReservationService {
     }
 
     private void notifierRejet(Reservation reservation) {
-        logger.info("Réservation {} rejetée", reservation.getId());
+        try {
+            String titre = reservation.getRessource() != null ? reservation.getRessource().getTitre() : null;
+            String biblioNom = reservation.getBibliotheque() != null ? reservation.getBibliotheque().getNom() : null;
+            emailService.sendReservationRejectedEmail(
+                    reservation.getUsager().getEmail(),
+                    reservation.getUsager().getNom(),
+                    reservation.getUsager().getPrenom(),
+                    titre,
+                    biblioNom
+            );
+        } catch (Exception e) {
+            logger.warn("Notification rejet échouée pour {}", reservation.getUsager().getEmail(), e);
+        }
     }
 
     private void notifierExpiration(Reservation reservation) {

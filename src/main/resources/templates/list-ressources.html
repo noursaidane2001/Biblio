@@ -95,6 +95,20 @@
                             <option value="indisponible">Indisponibles</option>
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="populariteFilter">
+                            <option value="">Toutes les popularités</option>
+                            <option value="FAIBLE">Faible</option>
+                            <option value="MOYENNE">Moyenne</option>
+                            <option value="ELEVEE">Élevée</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" class="form-control" id="dateDebutFilter" placeholder="Date début">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" class="form-control" id="dateFinFilter" placeholder="Date fin">
+                    </div>
                 </div>
             </div>
         </div>
@@ -218,11 +232,25 @@
             document.getElementById('categorieFilter').addEventListener('change', filterRessources);
             document.getElementById('typeFilter').addEventListener('change', filterRessources);
             document.getElementById('disponibiliteFilter').addEventListener('change', filterRessources);
+            document.getElementById('populariteFilter').addEventListener('change', filterRessources);
+            document.getElementById('dateDebutFilter').addEventListener('change', filterRessources);
+            document.getElementById('dateFinFilter').addEventListener('change', filterRessources);
         });
 
         async function loadRessources() {
             try {
-                const response = await fetch('/api/ressources');
+                const params = new URLSearchParams();
+                const cat = document.getElementById('categorieFilter').value;
+                const dispo = document.getElementById('disponibiliteFilter').value;
+                const pop = document.getElementById('populariteFilter').value;
+                const d1 = document.getElementById('dateDebutFilter').value;
+                const d2 = document.getElementById('dateFinFilter').value;
+                if (cat) params.set('categorie', cat);
+                if (dispo) params.set('disponible', dispo === 'disponible');
+                if (pop) params.set('popularite', pop);
+                if (d1) params.set('dateDebut', d1);
+                if (d2) params.set('dateFin', d2);
+                const response = await fetch('/api/ressources?' + params.toString());
                 const result = await response.json();
                 
                 if (response.ok && result.success) {
@@ -437,6 +465,9 @@
             const categorie = document.getElementById('categorieFilter').value;
             const type = document.getElementById('typeFilter').value;
             const disponibilite = document.getElementById('disponibiliteFilter').value;
+            const popularite = document.getElementById('populariteFilter').value;
+            const dateDebut = document.getElementById('dateDebutFilter').value;
+            const dateFin = document.getElementById('dateFinFilter').value;
             
             filteredRessources = allRessources.filter(ressource => {
                 const matchSearch = !searchTerm || 
@@ -453,8 +484,26 @@
                 } else if (disponibilite === 'indisponible') {
                     matchDisponibilite = ressource.exemplairesDisponibles === 0;
                 }
+
+                let matchPopularite = true;
+                if (popularite) {
+                    const pop = ressource.popularite || 0;
+                    const tier = pop < 2 ? 'FAIBLE' : (pop < 10 ? 'MOYENNE' : 'ELEVEE');
+                    matchPopularite = tier === popularite;
+                }
+
+                let matchDate = true;
+                if (dateDebut || dateFin) {
+                    const dp = ressource.datePublication ? new Date(ressource.datePublication) : null;
+                    if (!dp) {
+                        matchDate = false;
+                    } else {
+                        if (dateDebut) matchDate = matchDate && dp >= new Date(dateDebut);
+                        if (dateFin) matchDate = matchDate && dp <= new Date(dateFin);
+                    }
+                }
                 
-                return matchSearch && matchCategorie && matchType && matchDisponibilite;
+                return matchSearch && matchCategorie && matchType && matchDisponibilite && matchPopularite && matchDate;
             });
             
             displayRessources();

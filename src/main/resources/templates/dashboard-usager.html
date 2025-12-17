@@ -170,6 +170,23 @@
                                     <option value="EXPIREE">Mes réservations expirées</option>
                                 </select>
                             </div>
+                            <div class="col-lg-3">
+                                <label for="catalogPopularite" class="form-label fw-semibold text-muted">Popularité</label>
+                                <select class="form-select" id="catalogPopularite">
+                                    <option value="">Toutes</option>
+                                    <option value="FAIBLE">Faible</option>
+                                    <option value="MOYENNE">Moyenne</option>
+                                    <option value="ELEVEE">Élevée</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label fw-semibold text-muted">Date de publication</label>
+                                <div class="input-group">
+                                    <input type="date" class="form-control" id="catalogDateDebut">
+                                    <span class="input-group-text">au</span>
+                                    <input type="date" class="form-control" id="catalogDateFin">
+                                </div>
+                            </div>
                             <div class="col-12 col-lg-12 text-lg-end">
                                 <button class="btn btn-outline-secondary" id="catalogReset">
                                     <i class="bi bi-arrow-counterclockwise me-1"></i>Réinitialiser
@@ -406,24 +423,33 @@
             }
         }
 
-        function initialiserFiltresCatalogue() {
-            const search = document.getElementById('catalogSearch');
-            const categorie = document.getElementById('catalogCategorie');
-            const type = document.getElementById('catalogType');
-            const statut = document.getElementById('catalogStatut');
-            const reset = document.getElementById('catalogReset');
-            if (search) search.addEventListener('input', appliquerFiltresCatalogue);
-            if (categorie) categorie.addEventListener('change', appliquerFiltresCatalogue);
-            if (type) type.addEventListener('change', appliquerFiltresCatalogue);
-            if (statut) statut.addEventListener('change', appliquerFiltresCatalogue);
-            if (reset) reset.addEventListener('click', () => {
-                search.value = '';
-                categorie.value = '';
-                if (type) type.value = '';
-                if (statut) statut.value = '';
-                appliquerFiltresCatalogue();
-            });
-        }
+            function initialiserFiltresCatalogue() {
+                const search = document.getElementById('catalogSearch');
+                const categorie = document.getElementById('catalogCategorie');
+                const type = document.getElementById('catalogType');
+                const statut = document.getElementById('catalogStatut');
+                const popularite = document.getElementById('catalogPopularite');
+                const d1 = document.getElementById('catalogDateDebut');
+                const d2 = document.getElementById('catalogDateFin');
+                const reset = document.getElementById('catalogReset');
+                if (search) search.addEventListener('input', appliquerFiltresCatalogue);
+                if (categorie) categorie.addEventListener('change', appliquerFiltresCatalogue);
+                if (type) type.addEventListener('change', appliquerFiltresCatalogue);
+                if (statut) statut.addEventListener('change', appliquerFiltresCatalogue);
+                if (popularite) popularite.addEventListener('change', appliquerFiltresCatalogue);
+                if (d1) d1.addEventListener('change', appliquerFiltresCatalogue);
+                if (d2) d2.addEventListener('change', appliquerFiltresCatalogue);
+                if (reset) reset.addEventListener('click', () => {
+                    search.value = '';
+                    categorie.value = '';
+                    if (type) type.value = '';
+                    if (statut) statut.value = '';
+                    if (popularite) popularite.value = '';
+                    if (d1) d1.value = '';
+                    if (d2) d2.value = '';
+                    appliquerFiltresCatalogue();
+                });
+            }
 
         function normaliserTexte(val) {
             return (val || '')
@@ -434,32 +460,51 @@
                 .trim();
         }
 
-        function appliquerFiltresCatalogue() {
-            const terme = normaliserTexte(document.getElementById('catalogSearch')?.value || '');
-            const categorie = document.getElementById('catalogCategorie')?.value || '';
-            const type = document.getElementById('catalogType')?.value || '';
-            const statut = document.getElementById('catalogStatut')?.value || '';
-            filteredCatalogData = catalogData.filter(item => {
-                const titre = normaliserTexte(item.titre);
-                const auteur = normaliserTexte(item.auteur);
-                const catCode = item.categorie || '';
-                const catLabel = normaliserTexte(CATALOG_CATEGORY_LABELS[catCode] || '');
-                const typeCode = item.typeRessource || '';
-                const typeLabel = normaliserTexte(CATALOG_TYPE_LABELS[typeCode] || '');
-                const disponibles = item.exemplairesDisponibles ?? 0;
-                const reservationStatut = reservationsParRessource[item.id];
+            function appliquerFiltresCatalogue() {
+                const terme = normaliserTexte(document.getElementById('catalogSearch')?.value || '');
+                const categorie = document.getElementById('catalogCategorie')?.value || '';
+                const type = document.getElementById('catalogType')?.value || '';
+                const statut = document.getElementById('catalogStatut')?.value || '';
+                const popularite = document.getElementById('catalogPopularite')?.value || '';
+                const dateDebut = document.getElementById('catalogDateDebut')?.value || '';
+                const dateFin = document.getElementById('catalogDateFin')?.value || '';
+                filteredCatalogData = catalogData.filter(item => {
+                    const titre = normaliserTexte(item.titre);
+                    const auteur = normaliserTexte(item.auteur);
+                    const catCode = item.categorie || '';
+                    const catLabel = normaliserTexte(CATALOG_CATEGORY_LABELS[catCode] || '');
+                    const typeCode = item.typeRessource || '';
+                    const typeLabel = normaliserTexte(CATALOG_TYPE_LABELS[typeCode] || '');
+                    const disponibles = item.exemplairesDisponibles ?? 0;
+                    const reservationStatut = reservationsParRessource[item.id];
 
-                const catOk = !categorie || catCode === categorie;
-                const typeOk = !type || typeCode === type;
-                const dispoOk = !statut ||
-                    (statut === 'DISPONIBLE' && disponibles > 0) ||
-                    (statut === 'INDISPONIBLE' && disponibles <= 0) ||
-                    (['EN_ATTENTE','CONFIRMEE','ANNULEE','EXPIREE'].includes(statut) && reservationStatut === statut);
-                const texteOk = !terme || titre.includes(terme) || auteur.includes(terme) || catLabel.includes(terme) || typeLabel.includes(terme);
-                return catOk && typeOk && dispoOk && texteOk;
-            });
-            renderCatalogue();
-        }
+                    const catOk = !categorie || catCode === categorie;
+                    const typeOk = !type || typeCode === type;
+                    const dispoOk = !statut ||
+                        (statut === 'DISPONIBLE' && disponibles > 0) ||
+                        (statut === 'INDISPONIBLE' && disponibles <= 0) ||
+                        (['EN_ATTENTE','CONFIRMEE','ANNULEE','EXPIREE'].includes(statut) && reservationStatut === statut);
+                    let popOk = true;
+                    if (popularite) {
+                        const pop = item.popularite ?? 0;
+                        const tier = pop < 2 ? 'FAIBLE' : (pop < 10 ? 'MOYENNE' : 'ELEVEE');
+                        popOk = tier === popularite;
+                    }
+                    let dateOk = true;
+                    if (dateDebut || dateFin) {
+                        if (!item.datePublication) {
+                            dateOk = false;
+                        } else {
+                            const dp = new Date(item.datePublication);
+                            if (dateDebut) dateOk = dateOk && dp >= new Date(dateDebut);
+                            if (dateFin) dateOk = dateOk && dp <= new Date(dateFin);
+                        }
+                    }
+                    const texteOk = !terme || titre.includes(terme) || auteur.includes(terme) || catLabel.includes(terme) || typeLabel.includes(terme);
+                    return catOk && typeOk && dispoOk && popOk && dateOk && texteOk;
+                });
+                renderCatalogue();
+            }
 
         function renderCatalogue() {
             const grid = document.getElementById('catalogGrid');
