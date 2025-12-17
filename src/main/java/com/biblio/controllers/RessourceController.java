@@ -80,6 +80,7 @@ public class RessourceController {
      * Liste toutes les ressources (filtrées par bibliothèque pour les bibliothécaires)
      */
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> getAllRessources(@AuthenticationPrincipal UserDetails currentUser) {
         try {
             List<Ressource> ressourcesList;
@@ -120,6 +121,7 @@ public class RessourceController {
      * Récupère une ressource par son ID
      */
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> getRessourceById(@PathVariable Long id) {
         try {
             Ressource ressource = ressourceService.getById(id);
@@ -141,6 +143,7 @@ public class RessourceController {
      * Liste toutes les ressources d'une bibliothèque
      */
     @GetMapping("/bibliotheque/{bibliothequeId}")
+    @PreAuthorize("hasAnyRole('BIBLIOTHECAIRE','ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Map<String, Object>> getRessourcesByBibliotheque(@PathVariable Long bibliothequeId) {
         try {
             List<Map<String, Object>> ressources = ressourceService.getRessourcesByBibliotheque(bibliothequeId).stream()
