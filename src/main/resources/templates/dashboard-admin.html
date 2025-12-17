@@ -261,11 +261,13 @@
                                         <th>Niveau</th>
                                         <th>Message</th>
                                         <th>Utilisateur</th>
+                                        <th>Rôle</th>
+                                        <th>Bibliothèque</th>
                                     </tr>
                                 </thead>
                                 <tbody id="logsTableBody">
                                     <tr>
-                                        <td colspan="4" class="text-center">
+                                        <td colspan="6" class="text-center">
                                             <div class="spinner-border text-info" role="status">
                                                 <span class="visually-hidden">Chargement...</span>
                                             </div>
@@ -588,7 +590,7 @@
                 
                 if (data.success && data.logs) {
                     if (data.logs.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Aucun log disponible</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Aucun log disponible</td></tr>';
                         return;
                     }
                     
@@ -600,15 +602,17 @@
                             </td>
                             <td>${log.message}</td>
                             <td>${log.user || '-'}</td>
+                            <td>${log.roleDisplay || log.role || '-'}</td>
+                            <td>${log.bibliotheque || '-'}</td>
                         </tr>
                     `).join('');
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erreur lors du chargement des logs</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erreur lors du chargement des logs</td></tr>';
                 }
             } catch (error) {
                 console.error('Erreur lors du chargement des logs:', error);
                 document.getElementById('logsTableBody').innerHTML = 
-                    '<tr><td colspan="4" class="text-center text-danger">Erreur lors du chargement</td></tr>';
+                    '<tr><td colspan="6" class="text-center text-danger">Erreur lors du chargement</td></tr>';
             }
         }
 
