@@ -137,6 +137,12 @@
                     <i class="bi bi-file-earmark-text me-2"></i>Logs Système
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" 
+                        type="button" role="tab">
+                    <i class="bi bi-graph-up me-2"></i>Rapports Analytiques
+                </button>
+            </li>
         </ul>
 
         <!-- Contenu des onglets -->
@@ -273,6 +279,49 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onglet Rapports -->
+            <div class="tab-pane fade" id="reports" role="tabpanel">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Rapports Analytiques</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- KPI Row -->
+                        <div class="row mb-4 justify-content-center">
+                             <div class="col-md-4">
+                                <div class="card bg-light border-0 shadow-sm">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-muted text-uppercase fw-bold mb-3">Taux de Rotation Global</h6>
+                                        <h2 class="display-4 fw-bold text-success mb-2" th:text="${rotationRate} + '%'">-</h2>
+                                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>(Total Prêts / Stock Total)</small>
+                                    </div>
+                                </div>
+                             </div>
+                        </div>
+                        
+                        <!-- Charts Row -->
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-header bg-white fw-bold">Prêts par Catégorie</div>
+                                    <div class="card-body">
+                                        <canvas id="catChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                 <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-header bg-white fw-bold">Prêts par Bibliothèque</div>
+                                    <div class="card-body">
+                                        <canvas id="bibChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -441,6 +490,7 @@
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         @keyframes pulse {
@@ -1051,6 +1101,66 @@
                         toastEl.classList.add('show');
                     }
                 });
+            }
+
+            function initReportsCharts() {
+                const catCtx = document.getElementById('catChart');
+                if (catCtx && !catCtx.dataset.initialized) {
+                    new Chart(catCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: [[${catLabels}]],
+                            datasets: [{
+                                label: 'Nombre de Prêts',
+                                data: [[${catData}]],
+                                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                    catCtx.dataset.initialized = 'true';
+                }
+
+                const bibCtx = document.getElementById('bibChart');
+                if (bibCtx && !bibCtx.dataset.initialized) {
+                    new Chart(bibCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: [[${bibLabels}]],
+                            datasets: [{
+                                label: 'Nombre de Prêts',
+                                data: [[${bibData}]],
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.5)',
+                                    'rgba(54, 162, 235, 0.5)',
+                                    'rgba(255, 206, 86, 0.5)',
+                                    'rgba(75, 192, 192, 0.5)',
+                                    'rgba(153, 102, 255, 0.5)',
+                                    'rgba(255, 159, 64, 0.5)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: { responsive: true }
+                    });
+                    bibCtx.dataset.initialized = 'true';
+                }
+            }
+            const reportsTab = document.getElementById('reports-tab');
+            if (reportsTab) {
+                reportsTab.addEventListener('shown.bs.tab', function() {
+                    initReportsCharts();
+                });
+            }
+            const reportsPane = document.getElementById('reports');
+            if (reportsPane && reportsPane.classList.contains('show')) {
+                initReportsCharts();
             }
         });
     </script>
