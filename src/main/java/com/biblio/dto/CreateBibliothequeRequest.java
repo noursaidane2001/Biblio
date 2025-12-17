@@ -18,7 +18,9 @@ public record CreateBibliothequeRequest(
         String telephone,
         
         @Min(value = 0, message = "La capacité ne peut pas être négative")
-        Integer capaciteStock
+        Integer capaciteStock,
+        Double latitude,
+        Double longitude
 ) {
     public CreateBibliothequeRequest {
         // Normaliser les chaînes vides en null

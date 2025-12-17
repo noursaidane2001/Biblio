@@ -33,6 +33,7 @@ public class AuthService {
     private final EmailService emailService;
     private final long accessExpirationSeconds;
     private final SecureRandom secureRandom = new SecureRandom();
+    private final UserLogService userLogService;
 
     public AuthService(
             UserDAO userDAO,
@@ -41,7 +42,8 @@ public class AuthService {
             CustomUserDetailsService userDetailsService,
             AuthenticationManager authenticationManager,
             EmailService emailService,
-            @Value("${jwt.expiration}") long accessExpirationMs) {
+            @Value("${jwt.expiration}") long accessExpirationMs,
+            UserLogService userLogService) {
         this.userDAO = userDAO;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -49,6 +51,7 @@ public class AuthService {
         this.authenticationManager = authenticationManager;
         this.emailService = emailService;
         this.accessExpirationSeconds = accessExpirationMs / 1000; // Convertir en secondes
+        this.userLogService = userLogService;
     }
 
     /**
@@ -90,6 +93,11 @@ public class AuthService {
         
         // Construire les infos utilisateur
         Map<String, Object> userInfo = getUserInfoMap(authenticatedUser);
+
+        try {
+            userLogService.log(authenticatedUser, "LOGIN", "Connexion réussie pour " + authenticatedUser.getEmail(), "INFO");
+        } catch (Exception ignored) {
+        }
 
         return AuthResponse.of(accessToken, refreshToken, accessExpirationSeconds, userInfo);
     }
