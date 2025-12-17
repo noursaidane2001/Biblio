@@ -1,6 +1,7 @@
 package com.biblio.controllers;
 
 import com.biblio.dao.UserDAO;
+import com.biblio.dao.RessourceDAO;
 import com.biblio.dto.CreateUserRequest;
 import com.biblio.entities.Bibliotheque;
 import com.biblio.entities.User;
@@ -27,11 +28,13 @@ public class BibliothequeAdminController {
     private final AdminService adminService;
     private final BibliothequeService bibliothequeService;
     private final UserDAO userDAO;
+    private final RessourceDAO ressourceDAO;
 
-    public BibliothequeAdminController(AdminService adminService, BibliothequeService bibliothequeService, UserDAO userDAO) {
+    public BibliothequeAdminController(AdminService adminService, BibliothequeService bibliothequeService, UserDAO userDAO, RessourceDAO ressourceDAO) {
         this.adminService = adminService;
         this.bibliothequeService = bibliothequeService;
         this.userDAO = userDAO;
+        this.ressourceDAO = ressourceDAO;
     }
 
     /**
@@ -460,6 +463,20 @@ public class BibliothequeAdminController {
         map.put("actif", bibliotheque.getActif());
         map.put("latitude", bibliotheque.getLatitude());
         map.put("longitude", bibliotheque.getLongitude());
+        Integer used = 0;
+        try {
+            used = ressourceDAO.sumNombreExemplairesByBibliothequeId(bibliotheque.getId());
+        } catch (Exception ignored) {}
+        Integer capacite = bibliotheque.getCapaciteStock();
+        Integer remaining = null;
+        Integer percentRemaining = null;
+        if (capacite != null) {
+            remaining = Math.max(capacite - (used == null ? 0 : used), 0);
+            percentRemaining = capacite > 0 ? Math.max(0, Math.min(100, (int) Math.round((remaining * 100.0) / capacite))) : 0;
+        }
+        map.put("stockTotalExemplaires", used);
+        map.put("stockRestant", remaining);
+        map.put("stockPourcentageRestant", percentRemaining);
         return map;
     }
 }
