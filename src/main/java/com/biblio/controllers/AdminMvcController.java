@@ -4,6 +4,7 @@ import com.biblio.dao.PretDAO;
 import com.biblio.dao.RessourceDAO;
 import com.biblio.dao.UserDAO;
 import com.biblio.entities.User;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
@@ -16,6 +17,7 @@ import java.util.List;
 
 @Controller
 @RequestMapping("/admin")
+@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
 public class AdminMvcController {
     private final UserDAO userDAO;
     private final PretDAO pretDAO;
