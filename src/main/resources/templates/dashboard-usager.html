@@ -521,10 +521,9 @@
         function createCatalogueCard(ressource) {
             const categorie = CATALOG_CATEGORY_LABELS[ressource.categorie] || 'Divers';
             const typeLabel = CATALOG_TYPE_LABELS[ressource.typeRessource] || '';
-            const cover = (ressource.imageCouverture && ressource.imageCouverture.trim() !== '') 
-                ? ressource.imageCouverture 
-                : '/images/default-cover.png';
+            const cover = ressource.imageCouverture || 'https://illustrations.popsy.co/gray/bookshelf.svg';
             const disponibles = ressource.exemplairesDisponibles ?? 0;
+            const biblioNom = ressource.bibliotheque?.nom || '';
             const statutReservation = reservationsParRessource[ressource.id];
             const isActiveReservation = statutReservation === 'EN_ATTENTE';
             
@@ -565,6 +564,7 @@
                             </div>
                             <h5 class="fw-bold mb-1">${ressource.titre || 'Titre non renseigné'}</h5>
                             <p class="text-muted small mb-2"><i class="bi bi-pen me-1"></i>${ressource.auteur || 'Auteur inconnu'}</p>
+                            ${biblioNom ? `<p class="text-muted small mb-2"><i class="bi bi-building me-1"></i>${biblioNom}</p>` : ''}
                             <p class="text-muted small mb-3">${tronquer(ressource.description || 'Aucune description disponible.', 120)}</p>
                             <div class="d-flex align-items-center justify-content-between">
                                 <span class="badge ${disponibles > 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">
