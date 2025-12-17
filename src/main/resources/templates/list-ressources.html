@@ -280,7 +280,8 @@
                             <div class="d-flex align-items-start mb-3">
                                 ${ressource.imageCouverture ? 
                                     `<img src="${ressource.imageCouverture}" alt="${ressource.titre}" 
-                                         class="img-thumbnail me-3" style="width: 80px; height: 120px; object-fit: cover;">` :
+                                         class="img-thumbnail me-3" style="width: 80px; height: 120px; object-fit: cover;"
+                                         onerror="this.onerror=null; this.src='/images/default-cover.png';">` :
                                     `<div class="bg-secondary bg-opacity-10 me-3 d-flex align-items-center justify-content-center" 
                                          style="width: 80px; height: 120px;">
                                         <i class="bi bi-book text-secondary" style="font-size: 2rem;"></i>
