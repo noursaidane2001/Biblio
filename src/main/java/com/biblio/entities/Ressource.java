@@ -235,6 +235,9 @@ public class Ressource {
     }
 
     public void incrementerPopularite() {
+        if (this.popularite == null) {
+            this.popularite = 0;
+        }
         this.popularite++;
     }
 }

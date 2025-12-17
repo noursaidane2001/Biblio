@@ -75,5 +75,23 @@ public class DashboardController {
         
         return "dashboard";
     }
+
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public String profile(
+            @AuthenticationPrincipal UserDetails userDetails,
+            Model model
+    ) {
+        if (userDetails == null) {
+            return "redirect:/login";
+        }
+        User user = (User) model.getAttribute("currentUser");
+        if (user == null) {
+            user = userDAO.findByEmail(userDetails.getUsername())
+                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        }
+        model.addAttribute("user", user);
+        return "profile";
+    }
 }
 
