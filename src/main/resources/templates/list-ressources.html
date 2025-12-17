@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Liste des ressources - Biblio</title>
+    <meta th:name="_csrf" th:content="${_csrf.token}"/>
+    <meta th:name="_csrf_header" th:content="${_csrf.headerName}"/>
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" 
@@ -215,10 +217,110 @@
         </div>
     </div>
 
+    <!-- Modal d'édition -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editModalLabel">
+                        <i class="bi bi-pencil-square me-2"></i>Modifier la ressource
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editRessourceForm">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <input type="hidden" id="editId">
+                            <div class="col-md-6">
+                                <label class="form-label">Titre</label>
+                                <input type="text" class="form-control" id="editTitre" maxlength="200" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Auteur</label>
+                                <input type="text" class="form-control" id="editAuteur" maxlength="100" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ISBN</label>
+                                <input type="text" class="form-control" id="editIsbn" placeholder="978-3-16-148410-0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Éditeur</label>
+                                <input type="text" class="form-control" id="editEditeur" maxlength="100">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Catégorie</label>
+                                <select class="form-select" id="editCategorie">
+                                    <option value="">—</option>
+                                    <option value="LITTERATURE">Littérature</option>
+                                    <option value="SCIENCES">Sciences</option>
+                                    <option value="MULTIMEDIA">Multimédia</option>
+                                    <option value="HISTOIRE">Histoire</option>
+                                    <option value="TECHNOLOGIE">Technologie</option>
+                                    <option value="ARTS">Arts</option>
+                                    <option value="JEUNESSE">Jeunesse</option>
+                                    <option value="PHILOSOPHIE">Philosophie</option>
+                                    <option value="ECONOMIE">Économie</option>
+                                    <option value="DROIT">Droit</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Type</label>
+                                <select class="form-select" id="editType">
+                                    <option value="">—</option>
+                                    <option value="LIVRE">Livre</option>
+                                    <option value="DVD">DVD</option>
+                                    <option value="CD">CD</option>
+                                    <option value="REVUE">Revue</option>
+                                    <option value="EBOOK">E-Book</option>
+                                    <option value="AUDIOBOOK">Livre Audio</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date de publication</label>
+                                <input type="date" class="form-control" id="editDatePublication">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">URL Image de couverture</label>
+                                <input type="text" class="form-control" id="editImageCouverture" placeholder="https://example.com/image.jpg">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" id="editDescription" rows="3"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre d'exemplaires</label>
+                                <input type="number" class="form-control" id="editNombreExemplaires" min="1">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Exemplaires disponibles</label>
+                                <input type="number" class="form-control" id="editExemplairesDisponibles" min="0">
+                                <small class="text-muted">Doit être ≤ au nombre total</small>
+                            </div>
+                            <div class="col-12">
+                                <div id="editError" class="alert alert-danger d-none"></div>
+                                <div id="editSuccess" class="alert alert-success d-none"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div th:replace="~{fragments/footer :: footer}"></div>
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script th:inline="javascript">
+        const CURRENT_ROLE = /*[[${user.role.name()}]]*/ 'USAGER';
+        const IS_BIBLIOTHECAIRE = CURRENT_ROLE === 'BIBLIOTHECAIRE';
+    </script>
     
     <script>
         let allRessources = [];
@@ -294,13 +396,25 @@
                     showDetails(ressource);
                 });
             });
+            
+            // Ajouter les événements de clic pour l'édition
+            document.querySelectorAll('.edit-ressource').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const ressourceId = this.dataset.ressourceId;
+                    const ressource = allRessources.find(r => r.id == ressourceId);
+                    if (ressource) {
+                        openEditModal(ressource);
+                    }
+                });
+            });
         }
 
         function createRessourceCard(ressource) {
             const disponible = ressource.exemplairesDisponibles > 0;
             const categorieLabel = getCategorieLabel(ressource.categorie);
             const typeLabel = getTypeLabel(ressource.typeRessource);
-            
+             
             return `
                 <div class="col-md-6 col-lg-4">
                     <div class="card h-100 shadow-sm border-0 hover-shadow">
@@ -356,6 +470,10 @@
                                 <button class="btn btn-outline-info btn-sm view-details" data-ressource-id="${ressource.id}">
                                     <i class="bi bi-eye me-2"></i>Voir les détails
                                 </button>
+                                ${IS_BIBLIOTHECAIRE ? `
+                                <button type="button" class="btn btn-primary btn-sm mt-2 edit-ressource" data-ressource-id="${ressource.id}">
+                                    <i class="bi bi-pencil me-2"></i>Modifier
+                                </button>` : ``}
                             </div>
                         </div>
                         <div class="card-footer bg-transparent border-top-0">
@@ -367,6 +485,103 @@
                 </div>
             `;
         }
+
+        function openEditModal(ressource) {
+            // Prefill
+            document.getElementById('editId').value = ressource.id;
+            document.getElementById('editTitre').value = ressource.titre || '';
+            document.getElementById('editAuteur').value = ressource.auteur || '';
+            document.getElementById('editIsbn').value = ressource.isbn || '';
+            document.getElementById('editEditeur').value = ressource.editeur || '';
+            document.getElementById('editCategorie').value = ressource.categorie || '';
+            document.getElementById('editType').value = ressource.typeRessource || '';
+            document.getElementById('editDatePublication').value = ressource.datePublication || '';
+            document.getElementById('editImageCouverture').value = ressource.imageCouverture || '';
+            document.getElementById('editDescription').value = ressource.description || '';
+            document.getElementById('editNombreExemplaires').value = ressource.nombreExemplaires ?? '';
+            document.getElementById('editExemplairesDisponibles').value = ressource.exemplairesDisponibles ?? '';
+            document.getElementById('editError').classList.add('d-none');
+            document.getElementById('editSuccess').classList.add('d-none');
+            const modal = new bootstrap.Modal(document.getElementById('editModal'));
+            modal.show();
+        }
+
+        document.getElementById('editRessourceForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const payload = {};
+            // Inclure uniquement les champs saisis (pour éviter d'écraser avec null)
+            const titre = document.getElementById('editTitre').value.trim();
+            const auteur = document.getElementById('editAuteur').value.trim();
+            const isbn = document.getElementById('editIsbn').value.trim();
+            const editeur = document.getElementById('editEditeur').value.trim();
+            const categorie = document.getElementById('editCategorie').value;
+            const typeRessource = document.getElementById('editType').value;
+            const datePublication = document.getElementById('editDatePublication').value;
+            const imageCouverture = document.getElementById('editImageCouverture').value.trim();
+            const description = document.getElementById('editDescription').value.trim();
+            const nombreExemplaires = document.getElementById('editNombreExemplaires').value;
+            const exemplairesDisponibles = document.getElementById('editExemplairesDisponibles').value;
+
+            if (titre) payload.titre = titre;
+            if (auteur) payload.auteur = auteur;
+            if (isbn || isbn === '') payload.isbn = isbn;
+            if (editeur) payload.editeur = editeur;
+            if (categorie) payload.categorie = categorie;
+            if (typeRessource) payload.typeRessource = typeRessource;
+            if (datePublication) payload.datePublication = datePublication;
+            if (imageCouverture) payload.imageCouverture = imageCouverture;
+            if (description) payload.description = description;
+            if (nombreExemplaires) payload.nombreExemplaires = parseInt(nombreExemplaires, 10);
+            if (exemplairesDisponibles) payload.exemplairesDisponibles = parseInt(exemplairesDisponibles, 10);
+
+            // Simple validation clients
+            if (payload.exemplairesDisponibles != null && payload.nombreExemplaires != null &&
+                payload.exemplairesDisponibles > payload.nombreExemplaires) {
+                const err = document.getElementById('editError');
+                err.textContent = "Les exemplaires disponibles ne peuvent pas dépasser le total.";
+                err.classList.remove('d-none');
+                return;
+            }
+
+            try {
+                const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+                const headers = {'Content-Type': 'application/json'};
+                if (csrfToken && csrfHeader) {
+                    headers[csrfHeader] = csrfToken;
+                }
+                const response = await fetch(`/api/ressources/${id}`, {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    // Mettre à jour la ressource localement
+                    const idx = allRessources.findIndex(r => r.id == id);
+                    if (idx >= 0) {
+                        allRessources[idx] = result.ressource;
+                    }
+                    // Recalculer la liste filtrée et réafficher
+                    filterRessources();
+                    const ok = document.getElementById('editSuccess');
+                    ok.textContent = "Ressource mise à jour avec succès.";
+                    ok.classList.remove('d-none');
+                    setTimeout(() => {
+                        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                    }, 800);
+                } else {
+                    const err = document.getElementById('editError');
+                    err.textContent = result.message || "Échec de la mise à jour";
+                    err.classList.remove('d-none');
+                }
+            } catch (error) {
+                const err = document.getElementById('editError');
+                err.textContent = "Erreur réseau";
+                err.classList.remove('d-none');
+            }
+        });
 
         function showDetails(ressource) {
             const modalBody = document.getElementById('modalBody');
