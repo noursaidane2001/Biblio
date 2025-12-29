@@ -9,7 +9,7 @@ services:
     environment:
       - DB_HOST=db
       - SPRING_DATASOURCE_USERNAME=springuser
-      - SPRING_DATASOURCE_PASSWORD=Bouguerra123@
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
@@ -27,7 +27,7 @@ services:
     environment:
       - DB_HOST=db
       - SPRING_DATASOURCE_USERNAME=springuser
-      - SPRING_DATASOURCE_PASSWORD=Bouguerra123@
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
@@ -45,8 +45,8 @@ services:
     environment:
       - MYSQL_DATABASE=smartbiblio
       - MYSQL_USER=springuser
-      - MYSQL_PASSWORD=Bouguerra123@
-      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
     networks:
@@ -54,7 +54,7 @@ services:
     restart: unless-stopped
     command: --default-authentication-plugin=mysql_native_password
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "springuser", "-pBouguerra123@"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "springuser", "-p${DB_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
