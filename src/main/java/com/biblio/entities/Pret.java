@@ -148,7 +148,7 @@ public class Pret {
     }
 
     public void retourner() {
-        if (statut != StatutPret.EN_COURS && statut != StatutPret.EMPRUNTE) {
+        if (statut != StatutPret.EN_COURS && statut != StatutPret.EMPRUNTE && statut != StatutPret.BLOQUE) {
             throw new IllegalStateException("Ce prêt ne peut pas être retourné dans son état actuel");
         }
         this.statut = StatutPret.RETOURNE;
@@ -157,8 +157,8 @@ public class Pret {
     }
 
     public void cloturer() {
-        if (statut != StatutPret.RETOURNE) {
-            throw new IllegalStateException("Seul un prêt retourné peut être clôturé");
+        if (statut != StatutPret.RETOURNE && statut != StatutPret.BLOQUE) {
+            throw new IllegalStateException("Seuls un prêt retourné ou bloqué peuvent être clôturés");
         }
         this.statut = StatutPret.CLOTURE;
     }
@@ -188,10 +188,22 @@ public class Pret {
     }
 
     public long getJoursRetard() {
-        if (!estEnRetard()) {
+        if (dateRetourPrevu == null) {
             return 0;
         }
-        return ChronoUnit.DAYS.between(dateRetourPrevu, LocalDate.now());
+        if (dateRetourEffectif != null) {
+            LocalDate effectif = dateRetourEffectif.toLocalDate();
+            if (effectif.isAfter(dateRetourPrevu)) {
+                return ChronoUnit.DAYS.between(dateRetourPrevu, effectif);
+            }
+            return 0;
+        } else {
+            LocalDate today = LocalDate.now();
+            if (today.isAfter(dateRetourPrevu)) {
+                return ChronoUnit.DAYS.between(dateRetourPrevu, today);
+            }
+            return 0;
+        }
     }
 
     private void calculerPenalite() {
@@ -206,5 +218,12 @@ public class Pret {
 
     public boolean isActif() {
         return statut.isActive();
+    }
+
+    public void bloquer() {
+        if (statut != StatutPret.EN_COURS && statut != StatutPret.EMPRUNTE) {
+            throw new IllegalStateException("Seuls les prêts en cours ou empruntés peuvent être bloqués");
+        }
+        this.statut = StatutPret.BLOQUE;
     }
 }

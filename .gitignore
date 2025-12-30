@@ -32,4 +32,14 @@ build/
 ### VS Code ###
 .vscode/
 /src/main/resources/application.properties
-"src/main/resources/application.properties" 
+"src/main/resources/application.properties"
+
+### Uploads ###
+uploads/
+
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/crash.log
+**/crash.*.log
+**/*.tfvars.secret

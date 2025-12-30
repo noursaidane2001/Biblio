@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liste des ressources - Biblio</title>
+    <meta th:name="_csrf" th:content="${_csrf.token}"/>
+    <meta th:name="_csrf_header" th:content="${_csrf.headerName}"/>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" 
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/custom.css}" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div th:replace="~{fragments/toasts :: toast-container}"></div>
+
+    <div class="container py-5">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a th:href="@{/bibliothecaire/dashboard}" class="text-decoration-none">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Liste des ressources</li>
+            </ol>
+        </nav>
+
+        <!-- Titre et actions -->
+        <div class="card shadow-lg border-0 mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between">
+                    <div class="d-flex align-items-center mb-3 mb-md-0">
+                        <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" 
+                             style="width: 60px; height: 60px;">
+                            <i class="bi bi-journal-text text-info" style="font-size: 2rem;"></i>
+                        </div>
+                        <div>
+                            <h1 class="h3 fw-bold text-info mb-1">Liste des ressources</h1>
+                            <p class="text-muted mb-0">Gérez et consultez toutes les ressources de votre bibliothèque</p>
+                        </div>
+                    </div>
+                    <div>
+                        <a th:href="@{/ressources/new}" class="btn btn-info">
+                            <i class="bi bi-plus-circle me-2"></i>Ajouter une ressource
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres et recherche -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="searchInput" 
+                                   placeholder="Rechercher par titre, auteur, ISBN...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="categorieFilter">
+                            <option value="">Toutes les catégories</option>
+                            <option value="LITTERATURE">Littérature</option>
+                            <option value="SCIENCES">Sciences</option>
+                            <option value="MULTIMEDIA">Multimédia</option>
+                            <option value="HISTOIRE">Histoire</option>
+                            <option value="TECHNOLOGIE">Technologie</option>
+                            <option value="ARTS">Arts</option>
+                            <option value="JEUNESSE">Jeunesse</option>
+                            <option value="PHILOSOPHIE">Philosophie</option>
+                            <option value="ECONOMIE">Économie</option>
+                            <option value="DROIT">Droit</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="typeFilter">
+                            <option value="">Tous les types</option>
+                            <option value="LIVRE">Livre</option>
+                            <option value="DVD">DVD</option>
+                            <option value="CD">CD</option>
+                            <option value="REVUE">Revue</option>
+                            <option value="EBOOK">E-Book</option>
+                            <option value="AUDIOBOOK">Livre Audio</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="disponibiliteFilter">
+                            <option value="">Toutes</option>
+                            <option value="disponible">Disponibles</option>
+                            <option value="indisponible">Indisponibles</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="populariteFilter">
+                            <option value="">Toutes les popularités</option>
+                            <option value="FAIBLE">Faible</option>
+                            <option value="MOYENNE">Moyenne</option>
+                            <option value="ELEVEE">Élevée</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" class="form-control" id="dateDebutFilter" placeholder="Date début">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" class="form-control" id="dateFinFilter" placeholder="Date fin">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zone de chargement -->
+        <div id="loadingSpinner" class="text-center py-5">
+            <div class="spinner-border text-info" role="status">
+                <span class="visually-hidden">Chargement...</span>
+            </div>
+            <p class="text-muted mt-2">Chargement des ressources...</p>
+        </div>
+
+        <!-- Statistiques -->
+        <div id="statsContainer" class="row g-4 mb-4" style="display: none;">
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                            <i class="bi bi-book text-info" style="font-size: 1.5rem;"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Ressources</div>
+                            <div class="h5 mb-0" id="totalRessources">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                            <i class="bi bi-check-circle text-success" style="font-size: 1.5rem;"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Disponibles</div>
+                            <div class="h5 mb-0" id="totalDisponibles">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                            <i class="bi bi-stack text-warning" style="font-size: 1.5rem;"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Exemplaires</div>
+                            <div class="h5 mb-0" id="totalExemplaires">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                            <i class="bi bi-grid text-primary" style="font-size: 1.5rem;"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Catégories</div>
+                            <div class="h5 mb-0" id="totalCategories">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des ressources -->
+        <div id="ressourcesContainer" class="row g-4" style="display: none;">
+            <!-- Les cartes de ressources seront insérées ici dynamiquement -->
+        </div>
+
+        <!-- Message si aucune ressource -->
+        <div id="noRessources" class="card shadow-sm border-0" style="display: none;">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                <h4 class="mt-3 text-muted">Aucune ressource trouvée</h4>
+                <p class="text-muted">Commencez par ajouter votre première ressource</p>
+                <a th:href="@{/ressources/new}" class="btn btn-info mt-2">
+                    <i class="bi bi-plus-circle me-2"></i>Ajouter une ressource
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de détails -->
+    <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="detailsModalLabel">
+                        <i class="bi bi-info-circle me-2"></i>Détails de la ressource
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Le contenu sera inséré dynamiquement -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal d'édition -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editModalLabel">
+                        <i class="bi bi-pencil-square me-2"></i>Modifier la ressource
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editRessourceForm">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <input type="hidden" id="editId">
+                            <div class="col-md-6">
+                                <label class="form-label">Titre</label>
+                                <input type="text" class="form-control" id="editTitre" maxlength="200" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Auteur</label>
+                                <input type="text" class="form-control" id="editAuteur" maxlength="100" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ISBN</label>
+                                <input type="text" class="form-control" id="editIsbn" placeholder="978-3-16-148410-0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Éditeur</label>
+                                <input type="text" class="form-control" id="editEditeur" maxlength="100">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Catégorie</label>
+                                <select class="form-select" id="editCategorie">
+                                    <option value="">—</option>
+                                    <option value="LITTERATURE">Littérature</option>
+                                    <option value="SCIENCES">Sciences</option>
+                                    <option value="MULTIMEDIA">Multimédia</option>
+                                    <option value="HISTOIRE">Histoire</option>
+                                    <option value="TECHNOLOGIE">Technologie</option>
+                                    <option value="ARTS">Arts</option>
+                                    <option value="JEUNESSE">Jeunesse</option>
+                                    <option value="PHILOSOPHIE">Philosophie</option>
+                                    <option value="ECONOMIE">Économie</option>
+                                    <option value="DROIT">Droit</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Type</label>
+                                <select class="form-select" id="editType">
+                                    <option value="">—</option>
+                                    <option value="LIVRE">Livre</option>
+                                    <option value="DVD">DVD</option>
+                                    <option value="CD">CD</option>
+                                    <option value="REVUE">Revue</option>
+                                    <option value="EBOOK">E-Book</option>
+                                    <option value="AUDIOBOOK">Livre Audio</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date de publication</label>
+                                <input type="date" class="form-control" id="editDatePublication">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">URL Image de couverture</label>
+                                <input type="text" class="form-control" id="editImageCouverture" placeholder="https://example.com/image.jpg">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" id="editDescription" rows="3"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre d'exemplaires</label>
+                                <input type="number" class="form-control" id="editNombreExemplaires" min="1">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Exemplaires disponibles</label>
+                                <input type="number" class="form-control" id="editExemplairesDisponibles" min="0">
+                                <small class="text-muted">Doit être ≤ au nombre total</small>
+                            </div>
+                            <div class="col-12">
+                                <div id="editError" class="alert alert-danger d-none"></div>
+                                <div id="editSuccess" class="alert alert-success d-none"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script th:inline="javascript">
+        const CURRENT_ROLE = /*[[${user.role.name()}]]*/ 'USAGER';
+        const IS_BIBLIOTHECAIRE = CURRENT_ROLE === 'BIBLIOTHECAIRE';
+    </script>
+    
+    <script>
+        let allRessources = [];
+        let filteredRessources = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRessources();
+            
+            // Événements de filtrage
+            document.getElementById('searchInput').addEventListener('input', filterRessources);
+            document.getElementById('categorieFilter').addEventListener('change', filterRessources);
+            document.getElementById('typeFilter').addEventListener('change', filterRessources);
+            document.getElementById('disponibiliteFilter').addEventListener('change', filterRessources);
+            document.getElementById('populariteFilter').addEventListener('change', filterRessources);
+            document.getElementById('dateDebutFilter').addEventListener('change', filterRessources);
+            document.getElementById('dateFinFilter').addEventListener('change', filterRessources);
+        });
+
+        async function loadRessources() {
+            try {
+                const params = new URLSearchParams();
+                const cat = document.getElementById('categorieFilter').value;
+                const dispo = document.getElementById('disponibiliteFilter').value;
+                const pop = document.getElementById('populariteFilter').value;
+                const d1 = document.getElementById('dateDebutFilter').value;
+                const d2 = document.getElementById('dateFinFilter').value;
+                if (cat) params.set('categorie', cat);
+                if (dispo) params.set('disponible', dispo === 'disponible');
+                if (pop) params.set('popularite', pop);
+                if (d1) params.set('dateDebut', d1);
+                if (d2) params.set('dateFin', d2);
+                const response = await fetch('/api/ressources?' + params.toString());
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    allRessources = result.ressources || [];
+                    filteredRessources = [...allRessources];
+                    displayRessources();
+                    updateStats();
+                } else {
+                    showError('Erreur lors du chargement des ressources');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                showError('Impossible de charger les ressources');
+            } finally {
+                document.getElementById('loadingSpinner').style.display = 'none';
+            }
+        }
+
+        function displayRessources() {
+            const container = document.getElementById('ressourcesContainer');
+            const noRessources = document.getElementById('noRessources');
+            
+            if (filteredRessources.length === 0) {
+                container.style.display = 'none';
+                noRessources.style.display = 'block';
+                document.getElementById('statsContainer').style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'flex';
+            noRessources.style.display = 'none';
+            document.getElementById('statsContainer').style.display = 'flex';
+            
+            container.innerHTML = filteredRessources.map(ressource => createRessourceCard(ressource)).join('');
+            
+            // Ajouter les événements de clic pour les détails
+            document.querySelectorAll('.view-details').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const ressourceId = this.dataset.ressourceId;
+                    const ressource = allRessources.find(r => r.id == ressourceId);
+                    showDetails(ressource);
+                });
+            });
+            
+            // Ajouter les événements de clic pour l'édition
+            document.querySelectorAll('.edit-ressource').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const ressourceId = this.dataset.ressourceId;
+                    const ressource = allRessources.find(r => r.id == ressourceId);
+                    if (ressource) {
+                        openEditModal(ressource);
+                    }
+                });
+            });
+        }
+
+        function createRessourceCard(ressource) {
+            const disponible = ressource.exemplairesDisponibles > 0;
+            const categorieLabel = getCategorieLabel(ressource.categorie);
+            const typeLabel = getTypeLabel(ressource.typeRessource);
+             
+            return `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm border-0 hover-shadow">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-3">
+                                ${ressource.imageCouverture ? 
+                                    `<img src="${ressource.imageCouverture}" alt="${ressource.titre}" 
+                                         class="img-thumbnail me-3" style="width: 80px; height: 120px; object-fit: cover;"
+                                         onerror="this.onerror=null; this.src='/images/default-cover.png';">` :
+                                    `<div class="bg-secondary bg-opacity-10 me-3 d-flex align-items-center justify-content-center" 
+                                         style="width: 80px; height: 120px;">
+                                        <i class="bi bi-book text-secondary" style="font-size: 2rem;"></i>
+                                    </div>`
+                                }
+                                <div class="flex-grow-1">
+                                    <h5 class="card-title text-truncate mb-1" title="${ressource.titre}">
+                                        ${ressource.titre}
+                                    </h5>
+                                    <p class="text-muted small mb-2">
+                                        <i class="bi bi-person me-1"></i>${ressource.auteur}
+                                    </p>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span class="badge bg-info">${categorieLabel}</span>
+                                        <span class="badge bg-secondary">${typeLabel}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            ${ressource.isbn ? `<p class="small text-muted mb-2"><i class="bi bi-upc me-1"></i>ISBN: ${ressource.isbn}</p>` : ''}
+                            
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small text-muted">Disponibilité</span>
+                                    <span class="badge ${disponible ? 'bg-success' : 'bg-danger'}">
+                                        ${disponible ? 'Disponible' : 'Indisponible'}
+                                    </span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar ${disponible ? 'bg-success' : 'bg-danger'}" 
+                                         role="progressbar" 
+                                         style="width: ${(ressource.exemplairesDisponibles / ressource.nombreExemplaires) * 100}%"
+                                         aria-valuenow="${ressource.exemplairesDisponibles}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="${ressource.nombreExemplaires}">
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    ${ressource.exemplairesDisponibles} / ${ressource.nombreExemplaires} exemplaires disponibles
+                                </small>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button class="btn btn-outline-info btn-sm view-details" data-ressource-id="${ressource.id}">
+                                    <i class="bi bi-eye me-2"></i>Voir les détails
+                                </button>
+                                ${IS_BIBLIOTHECAIRE ? `
+                                <button type="button" class="btn btn-primary btn-sm mt-2 edit-ressource" data-ressource-id="${ressource.id}">
+                                    <i class="bi bi-pencil me-2"></i>Modifier
+                                </button>` : ``}
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-top-0">
+                            <small class="text-muted">
+                                <i class="bi bi-clock me-1"></i>Ajouté le ${formatDate(ressource.dateAjout)}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openEditModal(ressource) {
+            // Prefill
+            document.getElementById('editId').value = ressource.id;
+            document.getElementById('editTitre').value = ressource.titre || '';
+            document.getElementById('editAuteur').value = ressource.auteur || '';
+            document.getElementById('editIsbn').value = ressource.isbn || '';
+            document.getElementById('editEditeur').value = ressource.editeur || '';
+            document.getElementById('editCategorie').value = ressource.categorie || '';
+            document.getElementById('editType').value = ressource.typeRessource || '';
+            document.getElementById('editDatePublication').value = ressource.datePublication || '';
+            document.getElementById('editImageCouverture').value = ressource.imageCouverture || '';
+            document.getElementById('editDescription').value = ressource.description || '';
+            document.getElementById('editNombreExemplaires').value = ressource.nombreExemplaires ?? '';
+            document.getElementById('editExemplairesDisponibles').value = ressource.exemplairesDisponibles ?? '';
+            document.getElementById('editError').classList.add('d-none');
+            document.getElementById('editSuccess').classList.add('d-none');
+            const modal = new bootstrap.Modal(document.getElementById('editModal'));
+            modal.show();
+        }
+
+        document.getElementById('editRessourceForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const payload = {};
+            // Inclure uniquement les champs saisis (pour éviter d'écraser avec null)
+            const titre = document.getElementById('editTitre').value.trim();
+            const auteur = document.getElementById('editAuteur').value.trim();
+            const isbn = document.getElementById('editIsbn').value.trim();
+            const editeur = document.getElementById('editEditeur').value.trim();
+            const categorie = document.getElementById('editCategorie').value;
+            const typeRessource = document.getElementById('editType').value;
+            const datePublication = document.getElementById('editDatePublication').value;
+            const imageCouverture = document.getElementById('editImageCouverture').value.trim();
+            const description = document.getElementById('editDescription').value.trim();
+            const nombreExemplaires = document.getElementById('editNombreExemplaires').value;
+            const exemplairesDisponibles = document.getElementById('editExemplairesDisponibles').value;
+
+            if (titre) payload.titre = titre;
+            if (auteur) payload.auteur = auteur;
+            if (isbn || isbn === '') payload.isbn = isbn;
+            if (editeur) payload.editeur = editeur;
+            if (categorie) payload.categorie = categorie;
+            if (typeRessource) payload.typeRessource = typeRessource;
+            if (datePublication) payload.datePublication = datePublication;
+            if (imageCouverture) payload.imageCouverture = imageCouverture;
+            if (description) payload.description = description;
+            if (nombreExemplaires) payload.nombreExemplaires = parseInt(nombreExemplaires, 10);
+            if (exemplairesDisponibles) payload.exemplairesDisponibles = parseInt(exemplairesDisponibles, 10);
+
+            // Simple validation clients
+            if (payload.exemplairesDisponibles != null && payload.nombreExemplaires != null &&
+                payload.exemplairesDisponibles > payload.nombreExemplaires) {
+                const err = document.getElementById('editError');
+                err.textContent = "Les exemplaires disponibles ne peuvent pas dépasser le total.";
+                err.classList.remove('d-none');
+                return;
+            }
+
+            try {
+                const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+                const headers = {'Content-Type': 'application/json'};
+                if (csrfToken && csrfHeader) {
+                    headers[csrfHeader] = csrfToken;
+                }
+                const response = await fetch(`/api/ressources/${id}`, {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    // Mettre à jour la ressource localement
+                    const idx = allRessources.findIndex(r => r.id == id);
+                    if (idx >= 0) {
+                        allRessources[idx] = result.ressource;
+                    }
+                    // Recalculer la liste filtrée et réafficher
+                    filterRessources();
+                    const ok = document.getElementById('editSuccess');
+                    ok.textContent = "Ressource mise à jour avec succès.";
+                    ok.classList.remove('d-none');
+                    setTimeout(() => {
+                        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                    }, 800);
+                } else {
+                    const err = document.getElementById('editError');
+                    err.textContent = result.message || "Échec de la mise à jour";
+                    err.classList.remove('d-none');
+                }
+            } catch (error) {
+                const err = document.getElementById('editError');
+                err.textContent = "Erreur réseau";
+                err.classList.remove('d-none');
+            }
+        });
+
+        function showDetails(ressource) {
+            const modalBody = document.getElementById('modalBody');
+            const categorieLabel = getCategorieLabel(ressource.categorie);
+            const typeLabel = getTypeLabel(ressource.typeRessource);
+            const disponible = ressource.exemplairesDisponibles > 0;
+            
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3 mb-md-0">
+                        ${ressource.imageCouverture ? 
+                            `<img src="${ressource.imageCouverture}" alt="${ressource.titre}" 
+                                 class="img-fluid rounded shadow" style="max-height: 300px;">` :
+                            `<div class="bg-secondary bg-opacity-10 rounded d-flex align-items-center justify-content-center" 
+                                 style="height: 300px;">
+                                <i class="bi bi-book text-secondary" style="font-size: 5rem;"></i>
+                            </div>`
+                        }
+                    </div>
+                    <div class="col-md-8">
+                        <h4 class="fw-bold mb-3">${ressource.titre}</h4>
+                        
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="text-muted" style="width: 40%;"><i class="bi bi-person me-2"></i>Auteur:</td>
+                                <td class="fw-semibold">${ressource.auteur}</td>
+                            </tr>
+                            ${ressource.isbn ? `
+                            <tr>
+                                <td class="text-muted"><i class="bi bi-upc me-2"></i>ISBN:</td>
+                                <td>${ressource.isbn}</td>
+                            </tr>
+                            ` : ''}
+                            <tr>
+                                <td class="text-muted"><i class="bi bi-tag me-2"></i>Catégorie:</td>
+                                <td><span class="badge bg-info">${categorieLabel}</span></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted"><i class="bi bi-collection me-2"></i>Type:</td>
+                                <td><span class="badge bg-secondary">${typeLabel}</span></td>
+                            </tr>
+                            ${ressource.editeur ? `
+                            <tr>
+                                <td class="text-muted"><i class="bi bi-building me-2"></i>Éditeur:</td>
+                                <td>${ressource.editeur}</td>
+                            </tr>
+                            ` : ''}
+                            ${ressource.datePublication ? `
+                            <tr>
+                                <td class="text-muted"><i class="bi bi-calendar me-2"></i>Date de publication:</td>
+                                <td>${formatDate(ressource.datePublication)}</td>
+                            </tr>
+                            ` : ''}
+                            <tr>
+                                <td class="text-muted"><i class="bi bi-stack me-2"></i>Exemplaires:</td>
+                                <td>
+                                    <strong class="${disponible ? 'text-success' : 'text-danger'}">
+                                        ${ressource.exemplairesDisponibles}
+                                    </strong> / ${ressource.nombreExemplaires}
+                                    <span class="badge ${disponible ? 'bg-success' : 'bg-danger'} ms-2">
+                                        ${disponible ? 'Disponible' : 'Indisponible'}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted"><i class="bi bi-star me-2"></i>Popularité:</td>
+                                <td>${ressource.popularite} emprunts</td>
+                            </tr>
+                        </table>
+                        
+                        ${ressource.description ? `
+                        <div class="mt-3">
+                            <h6 class="fw-bold"><i class="bi bi-text-paragraph me-2"></i>Description:</h6>
+                            <p class="text-muted">${ressource.description}</p>
+                        </div>
+                        ` : ''}
+                        
+                        ${ressource.bibliotheque ? `
+                        <div class="mt-3 p-2 bg-light rounded">
+                            <small class="text-muted">
+                                <i class="bi bi-building me-1"></i>
+                                Bibliothèque: <strong>${ressource.bibliotheque.nom}</strong>
+                            </small>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
+            modal.show();
+        }
+
+        function filterRessources() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const categorie = document.getElementById('categorieFilter').value;
+            const type = document.getElementById('typeFilter').value;
+            const disponibilite = document.getElementById('disponibiliteFilter').value;
+            const popularite = document.getElementById('populariteFilter').value;
+            const dateDebut = document.getElementById('dateDebutFilter').value;
+            const dateFin = document.getElementById('dateFinFilter').value;
+            
+            filteredRessources = allRessources.filter(ressource => {
+                const matchSearch = !searchTerm || 
+                    ressource.titre.toLowerCase().includes(searchTerm) ||
+                    ressource.auteur.toLowerCase().includes(searchTerm) ||
+                    (ressource.isbn && ressource.isbn.toLowerCase().includes(searchTerm));
+                
+                const matchCategorie = !categorie || ressource.categorie === categorie;
+                const matchType = !type || ressource.typeRessource === type;
+                
+                let matchDisponibilite = true;
+                if (disponibilite === 'disponible') {
+                    matchDisponibilite = ressource.exemplairesDisponibles > 0;
+                } else if (disponibilite === 'indisponible') {
+                    matchDisponibilite = ressource.exemplairesDisponibles === 0;
+                }
+
+                let matchPopularite = true;
+                if (popularite) {
+                    const pop = ressource.popularite || 0;
+                    const tier = pop < 2 ? 'FAIBLE' : (pop < 10 ? 'MOYENNE' : 'ELEVEE');
+                    matchPopularite = tier === popularite;
+                }
+
+                let matchDate = true;
+                if (dateDebut || dateFin) {
+                    const dp = ressource.datePublication ? new Date(ressource.datePublication) : null;
+                    if (!dp) {
+                        matchDate = false;
+                    } else {
+                        if (dateDebut) matchDate = matchDate && dp >= new Date(dateDebut);
+                        if (dateFin) matchDate = matchDate && dp <= new Date(dateFin);
+                    }
+                }
+                
+                return matchSearch && matchCategorie && matchType && matchDisponibilite && matchPopularite && matchDate;
+            });
+            
+            displayRessources();
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('totalRessources').textContent = filteredRessources.length;
+            
+            const totalDisponibles = filteredRessources.reduce((sum, r) => sum + r.exemplairesDisponibles, 0);
+            document.getElementById('totalDisponibles').textContent = totalDisponibles;
+            
+            const totalExemplaires = filteredRessources.reduce((sum, r) => sum + r.nombreExemplaires, 0);
+            document.getElementById('totalExemplaires').textContent = totalExemplaires;
+            
+            const categories = new Set(filteredRessources.map(r => r.categorie));
+            document.getElementById('totalCategories').textContent = categories.size;
+        }
+
+        function getCategorieLabel(categorie) {
+            const labels = {
+                'LITTERATURE': 'Littérature',
+                'SCIENCES': 'Sciences',
+                'MULTIMEDIA': 'Multimédia',
+                'HISTOIRE': 'Histoire',
+                'TECHNOLOGIE': 'Technologie',
+                'ARTS': 'Arts',
+                'JEUNESSE': 'Jeunesse',
+                'PHILOSOPHIE': 'Philosophie',
+                'ECONOMIE': 'Économie',
+                'DROIT': 'Droit'
+            };
+            return labels[categorie] || categorie;
+        }
+
+        function getTypeLabel(type) {
+            const labels = {
+                'LIVRE': 'Livre',
+                'DVD': 'DVD',
+                'CD': 'CD',
+                'REVUE': 'Revue',
+                'EBOOK': 'E-Book',
+                'AUDIOBOOK': 'Livre Audio'
+            };
+            return labels[type] || type;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('fr-FR', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        function showError(message) {
+            const container = document.querySelector('.toast-container') || createToastContainer();
+            
+            const toastHtml = `
+                <div class="toast align-items-center text-bg-danger border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <strong>Erreur</strong><br>${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', toastHtml);
+            const toastElement = container.lastElementChild;
+            const toast = new bootstrap.Toast(toastElement);
+            toast.show();
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.className = 'toast-container position-fixed top-0 end-0 p-3';
+            container.style.zIndex = '11';
+            document.body.appendChild(container);
+            return container;
+        }
+    </script>
+    
+    <style>
+        .hover-shadow {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .hover-shadow:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        }
+    </style>
+</body>
+</html>

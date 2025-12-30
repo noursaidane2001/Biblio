@@ -1,0 +1,296 @@
+package com.biblio.controllers;
+
+import com.biblio.dao.UserDAO;
+import com.biblio.dto.CreateRessourceRequest;
+import com.biblio.entities.Ressource;
+import com.biblio.entities.User;
+import com.biblio.services.RessourceService;
+import jakarta.validation.Valid;
+import com.biblio.enums.Categorie;
+import com.biblio.enums.TypeRessource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("/api/ressources")
+public class RessourceController {
+    private final RessourceService ressourceService;
+    private final UserDAO userDAO;
+
+    public RessourceController(RessourceService ressourceService, UserDAO userDAO) {
+        this.ressourceService = ressourceService;
+        this.userDAO = userDAO;
+    }
+
+    /**
+     * POST /api/ressources
+     * Crée une nouvelle ressource (accessible aux bibliothécaires uniquement)
+     * La ressource est automatiquement associée à la bibliothèque du bibliothécaire
+     */
+    @PostMapping
+    @PreAuthorize("hasRole('BIBLIOTHECAIRE')")
+    public ResponseEntity<Map<String, Object>> createRessource(
+            @Valid @RequestBody CreateRessourceRequest request,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        try {
+            Ressource ressource = ressourceService.createRessource(
+                    request.titre(),
+                    request.auteur(),
+                    request.isbn(),
+                    request.categorie(),
+                    request.typeRessource(),
+                    request.description(),
+                    request.editeur(),
+                    request.datePublication(),
+                    request.nombreExemplaires(),
+                    request.exemplairesDisponibles(),
+                    request.imageCouverture(),
+                    currentUser.getUsername()
+            );
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "Ressource créée avec succès");
+            result.put("ressource", ressourceToMap(ressource));
+            return ResponseEntity.status(HttpStatus.CREATED).body(result);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to create ressource");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to create ressource");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * GET /api/ressources
+     * Liste toutes les ressources (filtrées par bibliothèque pour les bibliothécaires)
+     */
+    @GetMapping
+    public ResponseEntity<Map<String, Object>> getAllRessources(
+            @AuthenticationPrincipal UserDetails currentUser,
+            @RequestParam(value = "disponible", required = false) Boolean disponible,
+            @RequestParam(value = "popularite", required = false) String popularite,
+            @RequestParam(value = "categorie", required = false) String categorie,
+            @RequestParam(value = "dateDebut", required = false) java.time.LocalDate dateDebut,
+            @RequestParam(value = "dateFin", required = false) java.time.LocalDate dateFin
+    ) {
+        try {
+            List<Ressource> ressourcesList;
+
+            if (currentUser != null) {
+                User user = userDAO.findByEmail(currentUser.getUsername()).orElse(null);
+                if (user != null && user.isBibliothecaire() && user.getBibliotheque() != null) {
+                    ressourcesList = ressourceService.getRessourcesByBibliotheque(user.getBibliotheque().getId());
+                } else {
+                    ressourcesList = ressourceService.getAllRessources();
+                }
+            } else {
+                // Pour les utilisateurs non authentifiés ou autres cas, on retourne tout ou rien selon la politique.
+                // Ici on retourne tout pour l'instant (comportement par défaut)
+                ressourcesList = ressourceService.getAllRessources();
+            }
+
+            List<Ressource> filtered = ressourcesList.stream().filter(r -> {
+                boolean ok = true;
+                if (disponible != null) {
+                    boolean isDispo = r.getExemplairesDisponibles() != null && r.getExemplairesDisponibles() > 0;
+                    ok = ok && ((disponible && isDispo) || (!disponible && !isDispo));
+                }
+                if (popularite != null && !popularite.isBlank()) {
+                    int pop = r.getPopularite() != null ? r.getPopularite() : 0;
+                    String tier = pop < 2 ? "FAIBLE" : (pop < 10 ? "MOYENNE" : "ELEVEE");
+                    ok = ok && tier.equalsIgnoreCase(popularite);
+                }
+                if (categorie != null && !categorie.isBlank()) {
+                    ok = ok && r.getCategorie() != null && r.getCategorie().name().equalsIgnoreCase(categorie);
+                }
+                if (dateDebut != null || dateFin != null) {
+                    java.time.LocalDate dp = r.getDatePublication();
+                    if (dp == null) {
+                        ok = false;
+                    } else {
+                        if (dateDebut != null) ok = ok && (dp.isEqual(dateDebut) || dp.isAfter(dateDebut));
+                        if (dateFin != null) ok = ok && (dp.isEqual(dateFin) || dp.isBefore(dateFin));
+                    }
+                }
+                return ok;
+            }).toList();
+
+            List<Map<String, Object>> ressources = filtered.stream()
+                    .map(this::ressourceToMap)
+                    .collect(Collectors.toList());
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("ressources", ressources);
+            result.put("total", ressources.size());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to fetch ressources");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * PUT /api/ressources/{id}
+     * Met à jour une ressource (accessible aux bibliothécaires uniquement)
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('BIBLIOTHECAIRE')")
+    public ResponseEntity<Map<String, Object>> updateRessource(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> updates,
+            @AuthenticationPrincipal UserDetails currentUser) {
+        try {
+            String titre = (String) updates.get("titre");
+            String auteur = (String) updates.get("auteur");
+            String isbn = (String) updates.get("isbn");
+            Categorie categorie = null;
+            if (updates.get("categorie") instanceof String s && !s.isBlank()) {
+                categorie = Categorie.valueOf(s.toUpperCase());
+            }
+            TypeRessource typeRessource = null;
+            if (updates.get("typeRessource") instanceof String t && !t.isBlank()) {
+                typeRessource = TypeRessource.valueOf(t.toUpperCase());
+            }
+            String description = (String) updates.get("description");
+            String editeur = (String) updates.get("editeur");
+            LocalDate datePublication = null;
+            if (updates.get("datePublication") instanceof String d && !d.isBlank()) {
+                datePublication = LocalDate.parse(d);
+            }
+            Integer nombreExemplaires = updates.get("nombreExemplaires") != null
+                    ? ((Number) updates.get("nombreExemplaires")).intValue() : null;
+            Integer exemplairesDisponibles = updates.get("exemplairesDisponibles") != null
+                    ? ((Number) updates.get("exemplairesDisponibles")).intValue() : null;
+            String imageCouverture = (String) updates.get("imageCouverture");
+
+            Ressource updated = ressourceService.updateRessource(
+                    id,
+                    titre,
+                    auteur,
+                    isbn,
+                    categorie,
+                    typeRessource,
+                    description,
+                    editeur,
+                    datePublication,
+                    nombreExemplaires,
+                    exemplairesDisponibles,
+                    imageCouverture,
+                    currentUser.getUsername()
+            );
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "Ressource mise à jour avec succès");
+            result.put("ressource", ressourceToMap(updated));
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to update ressource");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to update ressource");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * GET /api/ressources/{id}
+     * Récupère une ressource par son ID
+     */
+    @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> getRessourceById(@PathVariable Long id) {
+        try {
+            Ressource ressource = ressourceService.getById(id);
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("ressource", ressourceToMap(ressource));
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Ressource not found");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        }
+    }
+
+    /**
+     * GET /api/ressources/bibliotheque/{bibliothequeId}
+     * Liste toutes les ressources d'une bibliothèque
+     */
+    @GetMapping("/bibliotheque/{bibliothequeId}")
+    @PreAuthorize("hasAnyRole('BIBLIOTHECAIRE','ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<Map<String, Object>> getRessourcesByBibliotheque(@PathVariable Long bibliothequeId) {
+        try {
+            List<Map<String, Object>> ressources = ressourceService.getRessourcesByBibliotheque(bibliothequeId).stream()
+                    .map(this::ressourceToMap)
+                    .collect(Collectors.toList());
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("ressources", ressources);
+            result.put("total", ressources.size());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to fetch ressources");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    private Map<String, Object> ressourceToMap(Ressource ressource) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", ressource.getId());
+        map.put("titre", ressource.getTitre());
+        map.put("auteur", ressource.getAuteur());
+        map.put("isbn", ressource.getIsbn());
+        map.put("categorie", ressource.getCategorie() != null ? ressource.getCategorie().name() : null);
+        map.put("typeRessource", ressource.getTypeRessource() != null ? ressource.getTypeRessource().name() : null);
+        map.put("description", ressource.getDescription());
+        map.put("editeur", ressource.getEditeur());
+        map.put("datePublication", ressource.getDatePublication());
+        map.put("nombreExemplaires", ressource.getNombreExemplaires());
+        map.put("exemplairesDisponibles", ressource.getExemplairesDisponibles());
+        map.put("imageCouverture", ressource.getImageCouverture());
+        map.put("popularite", ressource.getPopularite());
+        map.put("dateAjout", ressource.getDateAjout());
+        if (ressource.getBibliotheque() != null) {
+            map.put("bibliotheque", Map.of(
+                    "id", ressource.getBibliotheque().getId(),
+                    "nom", ressource.getBibliotheque().getNom()
+            ));
+        }
+        return map;
+    }
+}

@@ -63,5 +63,111 @@ public class EmailService {
             throw new RuntimeException("Impossible d'envoyer l'email de vérification", e);
         }
     }
-}
 
+    public void sendReservationConfirmationEmail(String toEmail, String nom, String prenom, String titreRessource, String deadlineRetraitDisplay) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Votre livre est prêt à être emprunté - Biblio");
+            String body = String.format(
+                "Bonjour %s %s,\n\n" +
+                "Bonne nouvelle ! Votre réservation pour \"%s\" a été confirmée.\n\n" +
+                "Le livre est prêt à être retiré à la bibliothèque.\n" +
+                "Date limite de retrait: %s\n\n" +
+                "Passé ce délai, la réservation pourra être annulée.\n\n" +
+                "Cordialement,\n" +
+                "Votre bibliothèque",
+                prenom, nom, titreRessource != null ? titreRessource : "Ressource", 
+                deadlineRetraitDisplay != null ? deadlineRetraitDisplay : "bientôt"
+            );
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Email de confirmation de réservation envoyé à : {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Erreur lors de l'envoi de l'email de confirmation à {} : {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Impossible d'envoyer l'email de confirmation de réservation", e);
+        }
+    }
+
+    public void sendPretRetraitReminderEmail(String toEmail, String nom, String prenom, String titreRessource, String bibliothequeNom, String deadlineRetraitDisplay) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Rappel de retrait de votre livre - Biblio");
+            String body = String.format(
+                "Bonjour %s %s,\n\n" +
+                "Ceci est un rappel pour retirer votre livre \"%s\" à la bibliothèque%s.\n" +
+                "%s\n\n" +
+                "Si vous ne pouvez pas vous déplacer, vous pouvez annuler la réservation pour libérer l'exemplaire.\n\n" +
+                "Cordialement,\n" +
+                "Votre bibliothèque",
+                prenom, nom,
+                titreRessource != null ? titreRessource : "Ressource",
+                bibliothequeNom != null ? " \"" + bibliothequeNom + "\"" : "",
+                (deadlineRetraitDisplay != null && !deadlineRetraitDisplay.isBlank())
+                        ? "Date limite de retrait: " + deadlineRetraitDisplay
+                        : "La date limite de retrait sera bientôt atteinte."
+            );
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Email de rappel de retrait envoyé à : {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Erreur lors de l'envoi de l'email de rappel à {} : {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Impossible d'envoyer l'email de rappel de retrait", e);
+        }
+    }
+
+    public void sendPretRetourReminderEmail(String toEmail, String nom, String prenom, String titreRessource, long joursRestants, String dateRetourPrevuDisplay) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Rappel de retour de votre livre - Biblio");
+            String body = String.format(
+                "Bonjour %s %s,\n\n" +
+                "Vous avez emprunté \"%s\".\n" +
+                "Il vous reste %d jour(s) avant la date de retour prévue: %s.\n\n" +
+                "Merci de retourner le livre à temps pour éviter le blocage de votre prêt.\n\n" +
+                "Cordialement,\n" +
+                "Votre bibliothèque",
+                prenom, nom,
+                titreRessource != null ? titreRessource : "Ressource",
+                Math.max(joursRestants, 0),
+                dateRetourPrevuDisplay != null ? dateRetourPrevuDisplay : "bientôt"
+            );
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Email de rappel de retour envoyé à : {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Erreur lors de l'envoi de l'email de rappel de retour à {} : {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Impossible d'envoyer l'email de rappel de retour", e);
+        }
+    }
+
+    public void sendReservationRejectedEmail(String toEmail, String nom, String prenom, String titreRessource, String bibliothequeNom) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("Réservation rejetée - Biblio");
+            String body = String.format(
+                "Bonjour %s %s,\n\n" +
+                "Votre réservation pour \"%s\" a été rejetée.\n" +
+                "Veuillez contacter le bibliothécaire%s pour connaître les raisons.\n\n" +
+                "Cordialement,\n" +
+                "Votre bibliothèque",
+                prenom, nom,
+                titreRessource != null ? titreRessource : "Ressource",
+                bibliothequeNom != null ? " de la bibliothèque \"" + bibliothequeNom + "\"" : ""
+            );
+            message.setText(body);
+            mailSender.send(message);
+            logger.info("Email de rejet de réservation envoyé à : {}", toEmail);
+        } catch (Exception e) {
+            logger.error("Erreur lors de l'envoi de l'email de rejet à {} : {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Impossible d'envoyer l'email de rejet de réservation", e);
+        }
+    }
+}

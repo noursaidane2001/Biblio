@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord - Administrateur de Bibliothèque - Biblio</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" 
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/custom.css}" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div th:replace="~{fragments/toasts :: toast-container}"></div>
+
+    <div class="container py-5">
+        <!-- Message de bienvenue -->
+        <div class="card shadow-lg border-0 mb-4 animate-fade-in">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-4" 
+                             style="width: 80px; height: 80px; animation: pulse 2s infinite;">
+                            <i class="bi bi-building text-primary" style="font-size: 3rem;"></i>
+                        </div>
+                        <div>
+                            <h1 class="h3 fw-bold text-primary mb-1">
+                                <i class="bi bi-gear-fill me-2"></i>Espace Administrateur de Bibliothèque
+                            </h1>
+                            <p class="text-muted mb-0">
+                                Bonjour <strong th:text="${user.nomComplet}">Administrateur</strong>, 
+                                gérez votre bibliothèque et ses utilisateurs.
+                            </p>
+                        </div>
+                    </div>
+                    <div>
+                        <a th:href="@{/me}" class="btn btn-outline-primary me-2">
+                            <i class="bi bi-person-gear me-2"></i>Mon Profil
+                        </a>
+                        <a href="/login?logout" class="btn btn-outline-secondary" id="logoutLink">
+                            <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglets -->
+        <ul class="nav nav-tabs mb-4" id="adminTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="bibliotheque-tab" data-bs-toggle="tab" data-bs-target="#bibliotheque" 
+                        type="button" role="tab">
+                    <i class="bi bi-building me-2"></i>Ma Bibliothèque
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="utilisateurs-tab" data-bs-toggle="tab" data-bs-target="#utilisateurs" 
+                        type="button" role="tab">
+                    <i class="bi bi-people me-2"></i>Utilisateurs
+                </button>
+            </li>
+        </ul>
+
+        <!-- Contenu des onglets -->
+        <div class="tab-content" id="adminTabContent">
+            <!-- Onglet Bibliothèque -->
+            <div class="tab-pane fade show active" id="bibliotheque" role="tabpanel">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-building me-2"></i>Informations de la Bibliothèque
+                        </h5>
+                        <button class="btn btn-light btn-sm" onclick="showEditBibliothequeModal()">
+                            <i class="bi bi-pencil me-2"></i>Modifier
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="bibliothequeInfo">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Chargement...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onglet Utilisateurs -->
+            <div class="tab-pane fade" id="utilisateurs" role="tabpanel">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-people me-2"></i>Gestion des Utilisateurs
+                        </h5>
+                        <button class="btn btn-light btn-sm" onclick="showCreateUserModal()">
+                            <i class="bi bi-person-plus me-2"></i>Créer un Utilisateur
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="utilisateursTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nom</th>
+                                        <th>Email</th>
+                                        <th>Rôle</th>
+                                        <th>Statut</th>
+                                        <th>Date Inscription</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="utilisateursTableBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Chargement...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="d-flex justify-content-between align-items-center mt-2" id="utilisateursPagination">
+                                <div>
+                                    <small class="text-muted">Page <span id="utilisateursPageNum">1</span>/<span id="utilisateursTotalPages">1</span></small>
+                                </div>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-outline-secondary" id="utilisateursPrevBtn">Précédent</button>
+                                    <button class="btn btn-outline-secondary" id="utilisateursNextBtn">Suivant</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour créer un utilisateur -->
+    <div class="modal fade" id="createUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-plus me-2"></i>Créer un Utilisateur
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="createUserForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="userNom" class="form-label">Nom *</label>
+                            <input type="text" class="form-control" id="userNom" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userPrenom" class="form-label">Prénom *</label>
+                            <input type="text" class="form-control" id="userPrenom" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userEmail" class="form-label">Email *</label>
+                            <input type="email" class="form-control" id="userEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userPassword" class="form-label">Mot de passe *</label>
+                            <input type="password" class="form-control" id="userPassword" required minlength="6">
+                            <small class="text-muted">Minimum 6 caractères</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userRole" class="form-label">Rôle *</label>
+                            <select class="form-select" id="userRole" required>
+                                <option value="">Sélectionner un rôle</option>
+                                <option value="BIBLIOTHECAIRE">Bibliothécaire</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>Créer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour modifier la bibliothèque -->
+    <div class="modal fade" id="editBibliothequeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil me-2"></i>Modifier la Bibliothèque
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editBibliothequeForm">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editBiblioNom" class="form-label">Nom *</label>
+                                <input type="text" class="form-control" id="editBiblioNom" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editBiblioVille" class="form-label">Ville *</label>
+                                <input type="text" class="form-control" id="editBiblioVille" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editBiblioAdresse" class="form-label">Adresse *</label>
+                            <input type="text" class="form-control" id="editBiblioAdresse" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editBiblioTelephone" class="form-label">Téléphone</label>
+                                <input type="tel" class="form-control" id="editBiblioTelephone">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editBiblioCapaciteStock" class="form-label">Capacité de stock</label>
+                                <input type="number" class="form-control" id="editBiblioCapaciteStock" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    
+    <style>
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .hover-shadow {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .hover-shadow:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        }
+        .badge-role-admin { background-color: #dc3545; }
+        .badge-role-bibliothecaire { background-color: #0dcaf0; }
+    </style>
+    
+    <script th:inline="javascript">
+        // Récupérer le token JWT depuis localStorage
+        function getAuthToken() {
+            return localStorage.getItem('jwt');
+        }
+
+        // Fonction pour faire des requêtes API authentifiées
+        async function apiRequest(url, options = {}) {
+            const token = getAuthToken();
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            };
+            
+            const mergedOptions = {
+                ...defaultOptions,
+                ...options,
+                headers: {
+                    ...defaultOptions.headers,
+                    ...(options.headers || {})
+                }
+            };
+            
+            const response = await fetch(url, mergedOptions);
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                throw new Error('Réponse non-JSON: ' + text.substring(0, 200));
+            }
+            return response.json();
+        }
+
+        // Charger les informations de la bibliothèque
+        async function loadBibliotheque() {
+            try {
+                const data = await apiRequest('/api/bibliotheque-admin/bibliotheque');
+                const container = document.getElementById('bibliothequeInfo');
+                
+                if (data.success && data.bibliotheque) {
+                    const biblio = data.bibliotheque;
+                    container.innerHTML = `
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-semibold text-muted" style="width: 200px;">Nom:</td>
+                                <td>${biblio.nom}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold text-muted">Ville:</td>
+                                <td>${biblio.ville}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold text-muted">Adresse:</td>
+                                <td>${biblio.adresse || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold text-muted">Téléphone:</td>
+                                <td>${biblio.telephone || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold text-muted">Capacité de stock:</td>
+                                <td>${biblio.capaciteStock || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold text-muted">Stockage restant:</td>
+                                <td>
+                                    ${biblio.capaciteStock ? `
+                                        <div class="mb-2">
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar bg-success" role="progressbar" 
+                                                     style="width: ${(biblio.stockPourcentageRestant ?? 0)}%;" 
+                                                     aria-valuenow="${biblio.stockPourcentageRestant ?? 0}" 
+                                                     aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                            <small class="text-muted">
+                                                ${biblio.stockRestant ?? 0} libres sur ${biblio.capaciteStock} 
+                                                (${biblio.stockTotalExemplaires ?? 0} utilisés) — 
+                                                ${biblio.stockPourcentageRestant ?? 0}%
+                                            </small>
+                                        </div>
+                                    ` : `
+                                        <span class="badge bg-info-subtle text-info">Capacité illimitée</span>
+                                    `}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold text-muted">Statut:</td>
+                                <td>
+                                    <span class="badge ${biblio.actif ? 'bg-success' : 'bg-danger'}">
+                                        ${biblio.actif ? 'Active' : 'Inactive'}
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+                    `;
+                } else {
+                    container.innerHTML = '<div class="alert alert-danger">Erreur lors du chargement des informations de la bibliothèque</div>';
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement de la bibliothèque:', error);
+                document.getElementById('bibliothequeInfo').innerHTML = 
+                    '<div class="alert alert-danger">Erreur lors du chargement des informations</div>';
+            }
+        }
+
+        // Charger la liste des utilisateurs
+        let utilisateursPage = 0;
+        const utilisateursSize = 10;
+        async function loadUtilisateurs(page = utilisateursPage) {
+            try {
+                const data = await apiRequest(`/api/bibliotheque-admin/utilisateurs?page=${page}&size=${utilisateursSize}`);
+                const tbody = document.getElementById('utilisateursTableBody');
+                
+                if (data.success && data.utilisateurs) {
+                    if (data.utilisateurs.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Aucun utilisateur trouvé</td></tr>';
+                        return;
+                    }
+                    
+                    tbody.innerHTML = data.utilisateurs.map(user => `
+                        <tr>
+                            <td>${user.id}</td>
+                            <td>${user.prenom} ${user.nom}</td>
+                            <td>${user.email}</td>
+                            <td>
+                                <span class="badge badge-role-${user.role.toLowerCase()}">
+                                    ${user.roleDisplay}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge ${user.actif ? 'bg-success' : 'bg-danger'}">
+                                    ${user.actif ? 'Actif' : 'Inactif'}
+                                </span>
+                            </td>
+                            <td>${new Date(user.dateInscription).toLocaleDateString('fr-FR')}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-warning me-1" 
+                                        onclick="toggleUserStatus(${user.id})" 
+                                        title="Activer/Désactiver">
+                                    <i class="bi bi-toggle-${user.actif ? 'on' : 'off'}"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="deleteUser(${user.id}, '${user.email}')" 
+                                        title="Supprimer">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                    utilisateursPage = data.page || 0;
+                    document.getElementById('utilisateursPageNum').textContent = (utilisateursPage + 1);
+                    document.getElementById('utilisateursTotalPages').textContent = (data.totalPages || 1);
+                    document.getElementById('utilisateursPrevBtn').disabled = !(data.hasPrevious);
+                    document.getElementById('utilisateursNextBtn').disabled = !(data.hasNext);
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erreur lors du chargement des utilisateurs</td></tr>';
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des utilisateurs:', error);
+                document.getElementById('utilisateursTableBody').innerHTML = 
+                    '<tr><td colspan="7" class="text-center text-danger">Erreur lors du chargement</td></tr>';
+            }
+        }
+
+        // Afficher le modal de création d'utilisateur
+        function showCreateUserModal() {
+            const modal = new bootstrap.Modal(document.getElementById('createUserModal'));
+            modal.show();
+        }
+
+        // Afficher le modal de modification de bibliothèque
+        async function showEditBibliothequeModal() {
+            try {
+                const data = await apiRequest('/api/bibliotheque-admin/bibliotheque');
+                if (data.success && data.bibliotheque) {
+                    const biblio = data.bibliotheque;
+                    document.getElementById('editBiblioNom').value = biblio.nom || '';
+                    document.getElementById('editBiblioVille').value = biblio.ville || '';
+                    document.getElementById('editBiblioAdresse').value = biblio.adresse || '';
+                    document.getElementById('editBiblioTelephone').value = biblio.telephone || '';
+                    document.getElementById('editBiblioCapaciteStock').value = biblio.capaciteStock || '';
+                }
+                const modal = new bootstrap.Modal(document.getElementById('editBibliothequeModal'));
+                modal.show();
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors du chargement des informations de la bibliothèque');
+            }
+        }
+
+        // Créer un utilisateur
+        document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                nom: document.getElementById('userNom').value.trim(),
+                prenom: document.getElementById('userPrenom').value.trim(),
+                email: document.getElementById('userEmail').value.trim(),
+                password: document.getElementById('userPassword').value,
+                role: document.getElementById('userRole').value,
+                emailVerifie: true,
+                actif: true
+            };
+            
+            if (!formData.nom) {
+                alert('Le nom est obligatoire');
+                return;
+            }
+            if (!formData.prenom) {
+                alert('Le prénom est obligatoire');
+                return;
+            }
+            if (!formData.email) {
+                alert('L\'email est obligatoire');
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+                alert('Format d\'email invalide');
+                return;
+            }
+            if (!formData.password || formData.password.length < 6) {
+                alert('Le mot de passe doit contenir au moins 6 caractères');
+                return;
+            }
+            
+            try {
+                const data = await apiRequest('/api/bibliotheque-admin/utilisateurs', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+                
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('createUserModal')).hide();
+                    document.getElementById('createUserForm').reset();
+                    loadUtilisateurs();
+                    alert('Utilisateur créé avec succès !');
+                } else {
+                    alert('Erreur: ' + (data.message || 'Impossible de créer l\'utilisateur'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la création de l\'utilisateur: ' + error.message);
+            }
+        });
+
+        // Modifier la bibliothèque
+        document.getElementById('editBibliothequeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                nom: document.getElementById('editBiblioNom').value.trim(),
+                ville: document.getElementById('editBiblioVille').value.trim(),
+                adresse: document.getElementById('editBiblioAdresse').value.trim(),
+                telephone: document.getElementById('editBiblioTelephone').value.trim() || null,
+                capaciteStock: document.getElementById('editBiblioCapaciteStock').value ? 
+                    parseInt(document.getElementById('editBiblioCapaciteStock').value) : null
+            };
+            
+            try {
+                const data = await apiRequest('/api/bibliotheque-admin/bibliotheque', {
+                    method: 'PUT',
+                    body: JSON.stringify(formData)
+                });
+                
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('editBibliothequeModal')).hide();
+                    loadBibliotheque();
+                    alert('Bibliothèque mise à jour avec succès !');
+                } else {
+                    alert('Erreur: ' + (data.message || 'Impossible de mettre à jour la bibliothèque'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la mise à jour de la bibliothèque: ' + error.message);
+            }
+        });
+
+        // Supprimer un utilisateur
+        async function deleteUser(id, email) {
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur ${email} ?\n\nCette action est irréversible.`)) {
+                return;
+            }
+            
+            try {
+                const data = await apiRequest(`/api/bibliotheque-admin/utilisateurs/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (data.success) {
+                    loadUtilisateurs();
+                    alert('Utilisateur supprimé avec succès !');
+                } else {
+                    alert('Erreur: ' + (data.message || 'Impossible de supprimer l\'utilisateur'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la suppression de l\'utilisateur');
+            }
+        }
+
+        // Activer/Désactiver un utilisateur
+        async function toggleUserStatus(id) {
+            try {
+                const data = await apiRequest(`/api/bibliotheque-admin/utilisateurs/${id}/toggle-status`, {
+                    method: 'PUT'
+                });
+                
+                if (data.success) {
+                    loadUtilisateurs();
+                } else {
+                    alert('Erreur: ' + (data.message || 'Impossible de modifier le statut'));
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la modification du statut');
+            }
+        }
+
+        // Initialiser au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBibliotheque();
+            loadUtilisateurs(0);
+            
+            // Charger les utilisateurs quand l'onglet est cliqué
+            document.getElementById('utilisateurs-tab').addEventListener('shown.bs.tab', function() {
+                loadUtilisateurs(0);
+            });
+            document.getElementById('utilisateursPrevBtn').addEventListener('click', () => {
+                if (utilisateursPage > 0) {
+                    loadUtilisateurs(utilisateursPage - 1);
+                }
+            });
+            document.getElementById('utilisateursNextBtn').addEventListener('click', () => {
+                loadUtilisateurs(utilisateursPage + 1);
+            });
+            
+            // Initialiser les toasts Bootstrap
+            const toastElements = document.querySelectorAll('.toast');
+            if (toastElements.length > 0) {
+                toastElements.forEach(function(toastEl) {
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+                        const toast = new bootstrap.Toast(toastEl, {
+                            autohide: true,
+                            delay: 5000
+                        });
+                        toast.show();
+                    } else {
+                        toastEl.classList.add('show');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

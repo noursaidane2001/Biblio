@@ -69,6 +69,10 @@
             if (brandLink) {
                 brandLink.addEventListener('click', function(e) { e.preventDefault(); });
             }
+            const notificationsLink = document.getElementById('notificationsLink');
+            if (notificationsLink) {
+                notificationsLink.addEventListener('click', function(e) { e.preventDefault(); });
+            }
         });
     </script>
 </head>
@@ -85,6 +89,12 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto align-items-center">
+                        <li class="nav-item me-2" sec:authorize="isAuthenticated()">
+                            <a href="#" class="btn btn-light btn-sm position-relative" id="notificationsLink">
+                                <i class="bi bi-bell"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifCount" style="display:none;">0</span>
+                            </a>
+                        </li>
                         <li class="nav-item" sec:authorize="isAuthenticated()">
                             <div class="dropdown">
                                 <a class="btn btn-outline-primary btn-sm dropdown-toggle d-flex align-items-center" 
@@ -102,13 +112,8 @@
                                     </li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
-                                        <a class="dropdown-item" th:href="@{/user/profile}">
+                                        <a class="dropdown-item" th:href="@{/me}">
                                             <i class="bi bi-person-gear me-2"></i>Mon profil
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" th:href="@{/}">
-                                            <i class="bi bi-house me-2"></i>Accueil
                                         </a>
                                     </li>
                                     <li><hr class="dropdown-divider"></li>

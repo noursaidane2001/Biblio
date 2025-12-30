@@ -51,8 +51,11 @@
             let dashboardUrl = '/dashboard';
             if (role) {
                 switch(role) {
+                    case 'SUPER_ADMIN':
+                        dashboardUrl = '/super-admin/dashboard';
+                        break;
                     case 'ADMIN':
-                        dashboardUrl = '/admin/dashboard';
+                        dashboardUrl = '/bibliotheque-admin/dashboard';
                         break;
                     case 'BIBLIOTHECAIRE':
                         dashboardUrl = '/bibliothecaire/dashboard';

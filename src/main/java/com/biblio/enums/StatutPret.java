@@ -4,6 +4,7 @@ public enum StatutPret {
 	  	RESERVE("Réservé"),
 	    EMPRUNTE("Emprunté"),
 	    EN_COURS("En cours"),
+	    BLOQUE("Bloqué"),
 	    RETOURNE("Retourné"),
 	    CLOTURE("Clôturé"),
 	    ANNULE("Annulé");

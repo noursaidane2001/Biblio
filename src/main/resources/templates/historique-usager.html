@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historique - Usager - Biblio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link th:href="@{/css/custom.css}" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div th:replace="~{fragments/toasts :: toast-container}"></div>
+    <div class="container py-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-secondary bg-opacity-10 p-3 text-secondary fs-4">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div>
+                    <h1 class="h4 fw-bold text-secondary mb-1">Historique</h1>
+                    <p class="mb-0 text-muted">Historique de vos prêts et réservations</p>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a th:href="@{/usager/dashboard}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Retour au tableau de bord
+                </a>
+            </div>
+        </div>
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-info text-white">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <h5 class="mb-0"><i class="bi bi-journal-text me-2"></i>Historique des prêts</h5>
+                            <span class="badge bg-light text-info fw-semibold" id="pretsCount">0</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2 mb-3 align-items-end">
+                            <div class="col-sm-4">
+                                <label class="form-label text-muted">Statut</label>
+                                <select class="form-select" id="filterPretsStatut">
+                                    <option value="">Tous</option>
+                                    <option value="RETOURNE">RETOURNE</option>
+                                    <option value="CLOTURE">CLOTURE</option>
+                                    <option value="EN_COURS">EN_COURS</option>
+                                    <option value="EMPRUNTE">EMPRUNTE</option>
+                                    <option value="BLOQUE">BLOQUE</option>
+                                    <option value="ANNULE">ANNULE</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="form-label text-muted">Du</label>
+                                <input type="date" class="form-control" id="filterPretsFrom">
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="form-label text-muted">Au</label>
+                                <input type="date" class="form-control" id="filterPretsTo">
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Ressource</th>
+                                        <th>Statut</th>
+                                        <th>Emprunt</th>
+                                        <th>Retour prévu</th>
+                                        <th>Retour effectif</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="histPretsTbody">
+                                    <tr><td colspan="5" class="text-muted text-center">Chargement…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2" id="histPretsPagination"></div>
+                        <div id="histPretsEmpty" class="text-muted d-none">Aucun prêt.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-secondary text-white">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <h5 class="mb-0"><i class="bi bi-bookmarks me-2"></i>Historique des réservations</h5>
+                            <span class="badge bg-light text-secondary fw-semibold" id="reservationsCount">0</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2 mb-3 align-items-end">
+                            <div class="col-sm-4">
+                                <label class="form-label text-muted">Statut</label>
+                                <select class="form-select" id="filterResStatut">
+                                    <option value="">Tous</option>
+                                    <option value="ANNULEE">ANNULEE</option>
+                                    <option value="EXPIREE">EXPIREE</option>
+                                    <option value="EN_ATTENTE">EN_ATTENTE</option>
+                                    <option value="CONFIRMEE">CONFIRMEE</option>
+                                    <option value="EMPRUNT_EN_COURS">EMPRUNT_EN_COURS</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="form-label text-muted">Du</label>
+                                <input type="date" class="form-control" id="filterResFrom">
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="form-label text-muted">Au</label>
+                                <input type="date" class="form-control" id="filterResTo">
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Ressource</th>
+                                        <th>Statut</th>
+                                        <th>Demande</th>
+                                        <th>Confirmation</th>
+                                        <th>Expiration</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="histReservationsTbody">
+                                    <tr><td colspan="5" class="text-muted text-center">Chargement…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2" id="histReservationsPagination"></div>
+                        <div id="histReservationsEmpty" class="text-muted d-none">Aucune réservation.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script>
+        let histPretsData = [];
+        let histReservationsData = [];
+        let histPretsFiltered = [];
+        let histReservationsFiltered = [];
+        const PAGE_SIZE = 10;
+        let pretsPage = 1;
+        let resPage = 1;
+        function fmtDate(d) {
+            if (!d) return '-';
+            const dt = new Date(d);
+            if (isNaN(dt)) return d;
+            const dd = String(dt.getDate()).padStart(2,'0');
+            const mm = String(dt.getMonth()+1).padStart(2,'0');
+            const yyyy = dt.getFullYear();
+            return dd + '/' + mm + '/' + yyyy;
+        }
+        function fmtDateTime(d) {
+            if (!d) return '-';
+            const dt = new Date(d);
+            if (isNaN(dt)) return d;
+            const dd = String(dt.getDate()).padStart(2,'0');
+            const mm = String(dt.getMonth()+1).padStart(2,'0');
+            const yyyy = dt.getFullYear();
+            const hh = String(dt.getHours()).padStart(2,'0');
+            const mn = String(dt.getMinutes()).padStart(2,'0');
+            return dd + '/' + mm + '/' + yyyy + ' ' + hh + ':' + mn;
+        }
+        function inRange(dateStr, fromStr, toStr) {
+            if (!fromStr && !toStr) return true;
+            const d = dateStr ? new Date(dateStr) : null;
+            if (!d || isNaN(d)) return false;
+            let ok = true;
+            if (fromStr) {
+                const f = new Date(fromStr);
+                ok = ok && d >= new Date(f.getFullYear(), f.getMonth(), f.getDate());
+            }
+            if (toStr) {
+                const t = new Date(toStr);
+                ok = ok && d <= new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59, 59, 999);
+            }
+            return ok;
+        }
+        function applyFiltersPrets() {
+            const statut = document.getElementById('filterPretsStatut')?.value || '';
+            const from = document.getElementById('filterPretsFrom')?.value || '';
+            const to = document.getElementById('filterPretsTo')?.value || '';
+            const filtered = histPretsData.filter(it => {
+                const okStatut = !statut || it.statut === statut;
+                const dateRef = it.dateEmprunt || it.dateRetourEffectif || it.dateRetourPrevu || it.dateReservation;
+                const okDate = inRange(dateRef, from, to);
+                return okStatut && okDate;
+            });
+            renderPrets(filtered);
+        }
+        function applyFiltersReservations() {
+            const statut = document.getElementById('filterResStatut')?.value || '';
+            const from = document.getElementById('filterResFrom')?.value || '';
+            const to = document.getElementById('filterResTo')?.value || '';
+            const filtered = histReservationsData.filter(r => {
+                const okStatut = !statut || r.statut === statut;
+                const dateRef = r.dateDemande || r.dateConfirmation || r.dateExpiration;
+                const okDate = inRange(dateRef, from, to);
+                return okStatut && okDate;
+            });
+            renderReservations(filtered);
+        }
+        async function loadHistoriquePrets() {
+            try {
+                const resp = await fetch('/api/prets/mes-prets', { headers: { 'Accept': 'application/json' } });
+                const data = await resp.json();
+                const items = Array.isArray(data.items) ? data.items : [];
+                histPretsData = items;
+                histPretsFiltered = items;
+                const tbody = document.getElementById('histPretsTbody');
+                const empty = document.getElementById('histPretsEmpty');
+                const count = document.getElementById('pretsCount');
+                if (count) count.textContent = String(items.length);
+                if (!tbody) return;
+                if (items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">Aucun prêt.</td></tr>';
+                    if (empty) empty.classList.remove('d-none');
+                    return;
+                }
+                pretsPage = 1;
+                renderPrets(histPretsFiltered);
+                if (empty) empty.classList.add('d-none');
+            } catch (e) {
+                const tbody = document.getElementById('histPretsTbody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-danger text-center">Erreur de chargement</td></tr>';
+            }
+        }
+        function renderPrets(items) {
+            const tbody = document.getElementById('histPretsTbody');
+            const empty = document.getElementById('histPretsEmpty');
+            const pagination = document.getElementById('histPretsPagination');
+            if (!tbody) return;
+            if (!items || items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">Aucun prêt.</td></tr>';
+                if (empty) empty.classList.remove('d-none');
+                if (pagination) pagination.innerHTML = '';
+                return;
+            }
+            const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+            pretsPage = Math.min(Math.max(1, pretsPage), totalPages);
+            const start = (pretsPage - 1) * PAGE_SIZE;
+            const slice = items.slice(start, start + PAGE_SIZE);
+            tbody.innerHTML = slice.map(it => {
+                    const titre = it.ressource && it.ressource.titre ? it.ressource.titre : 'Ressource';
+                    const auteur = it.ressource && it.ressource.auteur ? it.ressource.auteur : '';
+                    return `
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">${titre}</div>
+                                <div class="text-muted small">${auteur}</div>
+                            </td>
+                            <td><span class="badge bg-light text-dark">${it.statut || '-'}</span></td>
+                            <td>${fmtDateTime(it.dateEmprunt)}</td>
+                            <td>${fmtDate(it.dateRetourPrevu)}</td>
+                            <td>${fmtDate(it.dateRetourEffectif)}</td>
+                        </tr>
+                    `;
+                }).join('');
+            if (empty) empty.classList.add('d-none');
+            if (pagination) {
+                const prevDisabled = pretsPage <= 1 ? 'disabled' : '';
+                const nextDisabled = pretsPage >= totalPages ? 'disabled' : '';
+                pagination.innerHTML = `
+                    <div class="small text-muted">Page ${pretsPage} / ${totalPages}</div>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-secondary" id="pretsPrev" ${prevDisabled}><i class="bi bi-chevron-left"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary" id="pretsNext" ${nextDisabled}><i class="bi bi-chevron-right"></i></button>
+                    </div>
+                `;
+                const prev = document.getElementById('pretsPrev');
+                const next = document.getElementById('pretsNext');
+                if (prev) prev.onclick = () => { pretsPage = Math.max(1, pretsPage - 1); renderPrets(histPretsFiltered); };
+                if (next) next.onclick = () => { pretsPage = Math.min(totalPages, pretsPage + 1); renderPrets(histPretsFiltered); };
+            }
+        }
+        async function loadHistoriqueReservations() {
+            try {
+                const resp = await fetch('/api/reservations/mes', { headers: { 'Accept': 'application/json' } });
+                const data = await resp.json();
+                const list = Array.isArray(data.reservations) ? data.reservations : [];
+                histReservationsData = list;
+                histReservationsFiltered = list;
+                const tbody = document.getElementById('histReservationsTbody');
+                const empty = document.getElementById('histReservationsEmpty');
+                const count = document.getElementById('reservationsCount');
+                if (count) count.textContent = String(list.length);
+                if (!tbody) return;
+                if (list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">Aucune réservation.</td></tr>';
+                    if (empty) empty.classList.remove('d-none');
+                    return;
+                }
+                resPage = 1;
+                renderReservations(histReservationsFiltered);
+                if (empty) empty.classList.add('d-none');
+            } catch (e) {
+                const tbody = document.getElementById('histReservationsTbody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-danger text-center">Erreur de chargement</td></tr>';
+            }
+        }
+        function renderReservations(list) {
+            const tbody = document.getElementById('histReservationsTbody');
+            const empty = document.getElementById('histReservationsEmpty');
+            const pagination = document.getElementById('histReservationsPagination');
+            if (!tbody) return;
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">Aucune réservation.</td></tr>';
+                if (empty) empty.classList.remove('d-none');
+                if (pagination) pagination.innerHTML = '';
+                return;
+            }
+            const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+            resPage = Math.min(Math.max(1, resPage), totalPages);
+            const start = (resPage - 1) * PAGE_SIZE;
+            const slice = list.slice(start, start + PAGE_SIZE);
+            tbody.innerHTML = slice.map(r => {
+                    const titre = r.ressource && r.ressource.titre ? r.ressource.titre : 'Ressource';
+                    const auteur = r.ressource && r.ressource.auteur ? r.ressource.auteur : '';
+                    return `
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">${titre}</div>
+                                <div class="text-muted small">${auteur}</div>
+                            </td>
+                            <td><span class="badge bg-light text-dark">${r.statut || '-'}</span></td>
+                            <td>${fmtDateTime(r.dateDemande)}</td>
+                            <td>${fmtDateTime(r.dateConfirmation)}</td>
+                            <td>${fmtDateTime(r.dateExpiration)}</td>
+                        </tr>
+                    `;
+                }).join('');
+            if (empty) empty.classList.add('d-none');
+            if (pagination) {
+                const prevDisabled = resPage <= 1 ? 'disabled' : '';
+                const nextDisabled = resPage >= totalPages ? 'disabled' : '';
+                pagination.innerHTML = `
+                    <div class="small text-muted">Page ${resPage} / ${totalPages}</div>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-secondary" id="resPrev" ${prevDisabled}><i class="bi bi-chevron-left"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary" id="resNext" ${nextDisabled}><i class="bi bi-chevron-right"></i></button>
+                    </div>
+                `;
+                const prev = document.getElementById('resPrev');
+                const next = document.getElementById('resNext');
+                if (prev) prev.onclick = () => { resPage = Math.max(1, resPage - 1); renderReservations(histReservationsFiltered); };
+                if (next) next.onclick = () => { resPage = Math.min(totalPages, resPage + 1); renderReservations(histReservationsFiltered); };
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHistoriquePrets();
+            loadHistoriqueReservations();
+            const ps = document.getElementById('filterPretsStatut');
+            const pf = document.getElementById('filterPretsFrom');
+            const pt = document.getElementById('filterPretsTo');
+            const rs = document.getElementById('filterResStatut');
+            const rf = document.getElementById('filterResFrom');
+            const rt = document.getElementById('filterResTo');
+            if (ps) ps.addEventListener('change', applyFiltersPrets);
+            if (pf) pf.addEventListener('change', applyFiltersPrets);
+            if (pt) pt.addEventListener('change', applyFiltersPrets);
+            if (rs) rs.addEventListener('change', applyFiltersReservations);
+            if (rf) rf.addEventListener('change', applyFiltersReservations);
+            if (rt) rt.addEventListener('change', applyFiltersReservations);
+        });
+        function applyFiltersPrets() {
+            const statut = document.getElementById('filterPretsStatut')?.value || '';
+            const from = document.getElementById('filterPretsFrom')?.value || '';
+            const to = document.getElementById('filterPretsTo')?.value || '';
+            const filtered = histPretsData.filter(it => {
+                const okStatut = !statut || it.statut === statut;
+                const dateRef = it.dateEmprunt || it.dateRetourEffectif || it.dateRetourPrevu || it.dateReservation;
+                const okDate = inRange(dateRef, from, to);
+                return okStatut && okDate;
+            });
+            histPretsFiltered = filtered;
+            pretsPage = 1;
+            renderPrets(histPretsFiltered);
+        }
+        function applyFiltersReservations() {
+            const statut = document.getElementById('filterResStatut')?.value || '';
+            const from = document.getElementById('filterResFrom')?.value || '';
+            const to = document.getElementById('filterResTo')?.value || '';
+            const filtered = histReservationsData.filter(r => {
+                const okStatut = !statut || r.statut === statut;
+                const dateRef = r.dateDemande || r.dateConfirmation || r.dateExpiration;
+                const okDate = inRange(dateRef, from, to);
+                return okStatut && okDate;
+            });
+            histReservationsFiltered = filtered;
+            resPage = 1;
+            renderReservations(histReservationsFiltered);
+        }
+    </script>
+</body>
+</html>
