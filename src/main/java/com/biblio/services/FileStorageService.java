@@ -29,12 +29,14 @@ public class FileStorageService {
             }
             // Sanitize filename
             String originalFilename = file.getOriginalFilename();
+
             if (originalFilename != null) {
                 String normalized = Paths.get(originalFilename).normalize().toString();
                 if (normalized.contains("..") || normalized.contains("/") || normalized.contains("\\") || Paths.get(normalized).isAbsolute()) {
                     throw new RuntimeException("Cannot store file outside current directory.");
                 }
             }
+
             String extension = "";
             if (originalFilename != null && originalFilename.contains(".")) {
                 extension = originalFilename.substring(originalFilename.lastIndexOf("."));

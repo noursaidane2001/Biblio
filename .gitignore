@@ -37,9 +37,13 @@ build/
 ### Uploads ###
 uploads/
 
+.env
+
+
 **/.terraform/
 **/*.tfstate
 **/*.tfstate.*
 **/crash.log
 **/crash.*.log
 **/*.tfvars.secret
+
